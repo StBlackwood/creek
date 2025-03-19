@@ -1,8 +1,9 @@
 package datastore
 
 import (
+	"creek/internal/logger"
 	"errors"
-	"fmt"
+	"github.com/sirupsen/logrus"
 	"sync"
 	"time"
 )
@@ -19,6 +20,7 @@ type DataStore struct {
 	mu        sync.Mutex
 	stopGC    chan struct{}
 	gcRunning bool
+	log       *logrus.Logger
 }
 
 // NewDataStore initializes a new datastore instance
@@ -26,6 +28,7 @@ func NewDataStore() *DataStore {
 	ds := &DataStore{
 		data:   make(map[string]Entry),
 		stopGC: make(chan struct{}),
+		log:    logger.GetLogger(),
 	}
 	ds.startGC() // Start garbage collection
 	return ds
@@ -43,7 +46,7 @@ func (ds *DataStore) startGC() {
 			case <-ticker.C:
 				ds.cleanExpiredKeys()
 			case <-ds.stopGC:
-				fmt.Println("Stopping datastore garbage collection...")
+				ds.log.Info("Stopping datastore garbage collection...")
 				ds.gcRunning = false
 				return
 			}
@@ -60,7 +63,7 @@ func (ds *DataStore) cleanExpiredKeys() {
 	for key, entry := range ds.data {
 		if entry.Expiration > 0 && entry.Expiration <= now {
 			delete(ds.data, key)
-			fmt.Println("GC: Deleted expired key:", key)
+			ds.log.Trace("GC: Deleted expired key:", key)
 		}
 	}
 }
@@ -69,7 +72,7 @@ func (ds *DataStore) cleanExpiredKeys() {
 func (ds *DataStore) Stop() {
 	close(ds.stopGC)
 	ds.gcRunning = false
-	fmt.Println("Datastore shutdown complete.")
+	ds.log.Info("Datastore shutdown complete.")
 }
 
 // Set stores a key-value pair with an optional expiration time

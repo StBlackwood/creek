@@ -23,7 +23,7 @@ func handleSet(ds *datastore.DataStore, args []string) (string, error) {
 		}
 		ds.Set(args[1], args[2], ttl)
 	}
-	return fmt.Sprintf("OK: %s set to %s\n", args[1], args[2]), nil
+	return fmt.Sprintf("OK: %s set to %s", args[1], args[2]), nil
 }
 
 // handleGet retrieves a value by key
@@ -35,7 +35,7 @@ func handleGet(ds *datastore.DataStore, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("VALUE: %s\n", value), nil
+	return fmt.Sprintf("VALUE: %s", value), nil
 }
 
 // handleDelete removes a key-value pair
@@ -47,12 +47,12 @@ func handleDelete(ds *datastore.DataStore, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("OK: %s deleted\n", args[1]), nil
+	return fmt.Sprintf("OK: %s deleted", args[1]), nil
 }
 
 // handleVersion returns the server version
 func handleVersion() (string, error) {
-	return fmt.Sprintf("Server Version: %s\n", version.Version), nil
+	return fmt.Sprintf("Server Version: %s", version.Version), nil
 }
 
 // handleExpire sets a TTL on an existing key
@@ -68,7 +68,7 @@ func handleExpire(ds *datastore.DataStore, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("OK: TTL set to %d seconds\n", ttl), nil
+	return fmt.Sprintf("OK: TTL set to %d seconds", ttl), nil
 }
 
 // handleTTL retrieves the TTL for a key
@@ -80,5 +80,5 @@ func handleTTL(ds *datastore.DataStore, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("TTL: %d seconds\n", ttl), nil
+	return fmt.Sprintf("TTL: %d seconds", ttl), nil
 }
