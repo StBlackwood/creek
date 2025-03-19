@@ -1,0 +1,32 @@
+package main
+
+import (
+	"creek/internal/config"
+	"creek/internal/logger"
+	"creek/internal/server"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+)
+
+func main() {
+	// Load configuration
+	cfg := config.LoadConfig()
+
+	// Initialize logger
+	logger.InitLogger(cfg.LogLevel)
+
+	// Create and start TCP server
+	tcpServer := server.New(cfg.ServerAddress)
+	go tcpServer.Start()
+
+	// Handle graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	<-sigChan
+	log.Println("Shutting down server...")
+	tcpServer.Stop()
+	log.Println("Server stopped.")
+}
