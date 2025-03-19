@@ -21,6 +21,8 @@ func InitLogger(level string) {
 
 		// Set log level based on input
 		switch level {
+		case "trace":
+			log.SetLevel(logrus.TraceLevel)
 		case "debug":
 			log.SetLevel(logrus.DebugLevel)
 		case "info":

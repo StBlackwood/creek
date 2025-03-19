@@ -95,8 +95,11 @@ func (s *Server) handleClient(conn net.Conn) {
 		message := string(buf[:n])
 		log.Tracef("Received from %v: %s", conn.RemoteAddr(), message)
 
-		// Echo the message back to the client
-		_, err = conn.Write([]byte("Echo: " + message))
+		// echo the message back to client
+		reply := "Echo: " + message
+
+		log.Tracef("Sending reply: %s", reply)
+		_, err = conn.Write([]byte(reply))
 		if err != nil {
 			log.Warnf("Error sending response: %v", err)
 			return
