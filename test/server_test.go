@@ -16,7 +16,11 @@ func TestServer_StartStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to connect to server: %v", err)
 	}
-	conn.Close()
+	err = conn.Close()
+	if err != nil {
+		t.Fatalf("Failed to close connection: %v", err)
+		return
+	}
 
 	srv.Stop()
 }

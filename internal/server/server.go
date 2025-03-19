@@ -2,6 +2,8 @@ package server
 
 import (
 	"creek/internal/logger"
+	"creek/internal/version"
+	"fmt"
 	"net"
 	"sync"
 )
@@ -59,14 +61,24 @@ func (s *Server) Start() {
 
 // Stop gracefully shuts down the server
 func (s *Server) Stop() {
+	log := logger.GetLogger()
+
 	close(s.done)
-	s.listener.Close()
+	err := s.listener.Close()
+	if err != nil {
+		log.Errorf("Error closing listener: %v", err)
+		return
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for conn := range s.clients {
 		delete(s.clients, conn)
-		conn.Close()
+		err := conn.Close()
+		if err != nil {
+			log.Errorf("Error closing connection: %v", err)
+			return
+		}
 	}
 }
 
@@ -80,6 +92,14 @@ func (s *Server) handleClient(conn net.Conn) {
 			log.Warnf("Error closing client connection: %v", err)
 		}
 	}(conn)
+
+	versionMsg := fmt.Sprintf("Connected to Server Version: %s\n", version.Version)
+
+	_, err := conn.Write([]byte(versionMsg))
+	if err != nil {
+		log.Warnf("Error sending response: %v", err)
+		return
+	}
 
 	for {
 		buf := make([]byte, 1024)
