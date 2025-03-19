@@ -12,7 +12,6 @@ var (
 	mu        sync.Mutex
 )
 
-// handleSet stores a key-value pair
 func handleSet(args []string) (string, error) {
 	if len(args) < 3 {
 		return "", errors.New("SET requires a key and a value")

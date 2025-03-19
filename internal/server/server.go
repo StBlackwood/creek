@@ -97,11 +97,7 @@ func (s *Server) handleClient(conn net.Conn) {
 
 	versionMsg := fmt.Sprintf("Connected to Server Version: %s\n", version.Version)
 
-	_, err := conn.Write([]byte(versionMsg))
-	if err != nil {
-		log.Warnf("Error sending response: %v", err)
-		return
-	}
+	s.SendMsg(conn, versionMsg)
 
 	reader := bufio.NewReader(conn)
 	for {
@@ -120,12 +116,18 @@ func (s *Server) handleClient(conn net.Conn) {
 		response, err := handler.HandleMessage(message)
 		if err != nil {
 			log.Warnf("Error handling message: %v", err)
-			return
+			s.SendMsg(conn, err.Error())
+			continue
 		}
 		log.Tracef("Sending response: %v to client %v", response, conn.RemoteAddr())
-		_, err = conn.Write([]byte(response))
-		if err != nil {
-			log.Warnf("Error sending response: %v", err)
-		}
+		s.SendMsg(conn, response)
+	}
+}
+
+func (s *Server) SendMsg(conn net.Conn, response string) {
+	_, err := conn.Write([]byte(response))
+	if err != nil {
+		log := logger.GetLogger()
+		log.Warnf("Error sending msg: %v to client %v", err, conn.RemoteAddr())
 	}
 }
