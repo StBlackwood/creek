@@ -28,6 +28,10 @@ func HandleMessage(store *datastore.DataStore, message string) (string, error) {
 		return handleGet(store, args)
 	case "DELETE":
 		return handleDelete(store, args)
+	case "EXPIRE":
+		return handleExpire(store, args)
+	case "TTL":
+		return handleTTL(store, args)
 	case "PING":
 		return "PONG\n", nil
 	case "VERSION":

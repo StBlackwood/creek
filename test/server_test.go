@@ -8,11 +8,11 @@ import (
 )
 
 func TestServer_StartStop(t *testing.T) {
-	srv := server.New(":9090")
+	srv := server.New("localhost:9090")
 	go srv.Start()
 	time.Sleep(1 * time.Second)
 
-	conn, err := net.Dial("tcp", ":9090")
+	conn, err := net.Dial("tcp", "localhost:9090")
 	if err != nil {
 		t.Fatalf("Failed to connect to server: %v", err)
 	}

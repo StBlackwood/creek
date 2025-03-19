@@ -110,3 +110,35 @@ func (ds *DataStore) Delete(key string) error {
 	delete(ds.data, key)
 	return nil
 }
+
+// Expire sets a TTL on an existing key
+func (ds *DataStore) Expire(key string, ttlSeconds int) error {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+	entry, exists := ds.data[key]
+	if !exists {
+		return errors.New("key not found")
+	}
+	entry.Expiration = time.Now().Unix() + int64(ttlSeconds)
+	ds.data[key] = entry
+	return nil
+}
+
+// TTL retrieves the remaining time before a key expires
+func (ds *DataStore) TTL(key string) (int, error) {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+	entry, exists := ds.data[key]
+	if !exists {
+		return -1, errors.New("key not found")
+	}
+	if entry.Expiration == 0 {
+		return -1, errors.New("key has no expiration")
+	}
+	remaining := entry.Expiration - time.Now().Unix()
+	if remaining <= 0 {
+		delete(ds.data, key)
+		return -1, errors.New("key expired")
+	}
+	return int(remaining), nil
+}
