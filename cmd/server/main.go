@@ -4,7 +4,6 @@ import (
 	"creek/internal/config"
 	"creek/internal/logger"
 	"creek/internal/server"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -17,6 +16,8 @@ func main() {
 	// Initialize logger
 	logger.InitLogger(cfg.LogLevel)
 
+	log := logger.GetLogger()
+
 	// Create and start TCP server
 	tcpServer := server.New(cfg.ServerAddress)
 	go tcpServer.Start()
@@ -26,7 +27,7 @@ func main() {
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
 	<-sigChan
-	log.Println("Shutting down server...")
+	log.Info("Shutting down server...")
 	tcpServer.Stop()
-	log.Println("Server stopped.")
+	log.Info("Server stopped.")
 }

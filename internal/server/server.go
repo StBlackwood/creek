@@ -1,7 +1,7 @@
 package server
 
 import (
-	"log"
+	"creek/internal/logger"
 	"net"
 	"sync"
 )
@@ -26,13 +26,15 @@ func New(address string) *Server {
 
 // Start begins listening for TCP connections
 func (s *Server) Start() {
+	log := logger.GetLogger()
+
 	var err error
 	s.listener, err = net.Listen("tcp", s.address)
 	if err != nil {
 		log.Fatalf("Error starting server: %v", err)
 	}
 
-	log.Printf("Server listening on %s", s.address)
+	log.Infof("Server listening on %s", s.address)
 
 	for {
 		conn, err := s.listener.Accept()
@@ -41,7 +43,7 @@ func (s *Server) Start() {
 			case <-s.done:
 				return
 			default:
-				log.Printf("Error accepting connection: %v", err)
+				log.Warnf("Error accepting connection: %v", err)
 			}
 			continue
 		}
@@ -50,7 +52,7 @@ func (s *Server) Start() {
 		s.clients[conn] = true
 		s.mu.Unlock()
 
-		log.Printf("New client connected: %v", conn.RemoteAddr())
+		log.Debugf("New client connected: %v", conn.RemoteAddr())
 		go s.handleClient(conn)
 	}
 }
@@ -70,10 +72,12 @@ func (s *Server) Stop() {
 
 // handleClient manages an individual client connection
 func (s *Server) handleClient(conn net.Conn) {
+	log := logger.GetLogger()
+
 	defer func(conn net.Conn) {
 		err := conn.Close()
 		if err != nil {
-			log.Printf("Error closing client connection: %v", err)
+			log.Warnf("Error closing client connection: %v", err)
 		}
 	}(conn)
 
@@ -81,7 +85,7 @@ func (s *Server) handleClient(conn net.Conn) {
 		buf := make([]byte, 1024)
 		n, err := conn.Read(buf)
 		if err != nil {
-			log.Printf("Client %v disconnected", conn.RemoteAddr())
+			log.Debugf("Client %v disconnected", conn.RemoteAddr())
 			s.mu.Lock()
 			delete(s.clients, conn)
 			s.mu.Unlock()
@@ -89,12 +93,12 @@ func (s *Server) handleClient(conn net.Conn) {
 		}
 
 		message := string(buf[:n])
-		log.Printf("Received from %v: %s", conn.RemoteAddr(), message)
+		log.Tracef("Received from %v: %s", conn.RemoteAddr(), message)
 
 		// Echo the message back to the client
 		_, err = conn.Write([]byte("Echo: " + message))
 		if err != nil {
-			log.Printf("Error sending response: %v", err)
+			log.Warnf("Error sending response: %v", err)
 			return
 		}
 	}
