@@ -2,6 +2,7 @@ package server
 
 import (
 	"bufio"
+	"creek/internal/datastore"
 	"creek/internal/handler"
 	"creek/internal/logger"
 	"creek/internal/version"
@@ -12,19 +13,21 @@ import (
 
 // Server represents a TCP server
 type Server struct {
-	address  string
-	clients  map[net.Conn]bool
-	mu       sync.Mutex
-	listener net.Listener
-	done     chan struct{}
+	address   string
+	clients   map[net.Conn]bool
+	mu        sync.Mutex
+	listener  net.Listener
+	done      chan struct{}
+	dataStore *datastore.DataStore // Integrated datastore
 }
 
 // New creates a new Server instance
 func New(address string) *Server {
 	return &Server{
-		address: address,
-		clients: make(map[net.Conn]bool),
-		done:    make(chan struct{}),
+		address:   address,
+		clients:   make(map[net.Conn]bool),
+		done:      make(chan struct{}),
+		dataStore: datastore.NewDataStore(), // Initialize datastore
 	}
 }
 
@@ -71,6 +74,7 @@ func (s *Server) Stop() {
 		log.Errorf("Error closing listener: %v", err)
 		return
 	}
+	s.dataStore.Stop() // Stop datastore and GC
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -113,7 +117,7 @@ func (s *Server) handleClient(conn net.Conn) {
 		log.Trace("Received from ", conn.RemoteAddr(), ": ", message)
 
 		// Process and respond to message
-		response, err := handler.HandleMessage(message)
+		response, err := handler.HandleMessage(s.dataStore, message)
 		if err != nil {
 			log.Warnf("Error handling message: %v", err)
 			s.SendMsg(conn, err.Error())

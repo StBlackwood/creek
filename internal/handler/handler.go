@@ -1,13 +1,14 @@
 package handler
 
 import (
+	"creek/internal/datastore"
 	"creek/internal/logger"
 	"errors"
 	"strings"
 )
 
 // HandleMessage processes incoming messages from clients
-func HandleMessage(message string) (string, error) {
+func HandleMessage(store *datastore.DataStore, message string) (string, error) {
 	log := logger.GetLogger()
 
 	// Trim and split input into arguments
@@ -22,11 +23,11 @@ func HandleMessage(message string) (string, error) {
 	// Route to appropriate command handler
 	switch command {
 	case "SET":
-		return handleSet(args)
+		return handleSet(store, args)
 	case "GET":
-		return handleGet(args)
+		return handleGet(store, args)
 	case "DELETE":
-		return handleDelete(args)
+		return handleDelete(store, args)
 	case "PING":
 		return "PONG\n", nil
 	case "VERSION":
