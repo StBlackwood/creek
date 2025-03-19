@@ -1,6 +1,8 @@
 package server
 
 import (
+	"bufio"
+	"creek/internal/handler"
 	"creek/internal/logger"
 	"creek/internal/version"
 	"fmt"
@@ -101,28 +103,29 @@ func (s *Server) handleClient(conn net.Conn) {
 		return
 	}
 
+	reader := bufio.NewReader(conn)
 	for {
-		buf := make([]byte, 1024)
-		n, err := conn.Read(buf)
+		message, err := reader.ReadString('\n')
 		if err != nil {
-			log.Debugf("Client %v disconnected", conn.RemoteAddr())
+			log.Warn("Client disconnected: ", conn.RemoteAddr())
 			s.mu.Lock()
 			delete(s.clients, conn)
 			s.mu.Unlock()
 			return
 		}
 
-		message := string(buf[:n])
-		log.Tracef("Received from %v: %s", conn.RemoteAddr(), message)
+		log.Trace("Received from ", conn.RemoteAddr(), ": ", message)
 
-		// echo the message back to client
-		reply := "Echo: " + message
-
-		log.Tracef("Sending reply: %s", reply)
-		_, err = conn.Write([]byte(reply))
+		// Process and respond to message
+		response, err := handler.HandleMessage(message)
+		if err != nil {
+			log.Warnf("Error handling message: %v", err)
+			return
+		}
+		log.Tracef("Sending response: %v to client %v", response, conn.RemoteAddr())
+		_, err = conn.Write([]byte(response))
 		if err != nil {
 			log.Warnf("Error sending response: %v", err)
-			return
 		}
 	}
 }

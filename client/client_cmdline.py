@@ -41,7 +41,7 @@ def main():
                 print("Closing connection...")
                 sock.close()
                 break
-
+            message += "\n" # add delimiter at the end
             sock.sendall(message.encode())  # Send message to the server
 
     except KeyboardInterrupt:
