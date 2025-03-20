@@ -20,10 +20,8 @@ type Config struct {
 	DataStoreDirectory string
 }
 
-var Conf Config
-
 // LoadConfig initializes the configuration from a file
-func LoadConfig() error {
+func LoadConfig() (*Config, error) {
 	configFile := getEnv(EnvConfigFile, DefaultConfigFile)
 
 	file, err := os.Open(configFile)
@@ -51,17 +49,23 @@ func LoadConfig() error {
 
 		key, value, err := parseConfigLine(line)
 		if err != nil {
-			return fmt.Errorf("invalid config entry in %s: %s", configFile, err)
+			return nil, fmt.Errorf("invalid config entry in %s: %s", configFile, err)
 		}
 
 		parsedConfig[key] = value
 	}
 
 	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("error reading config file %s: %w", configFile, err)
+		return nil, fmt.Errorf("error reading config file %s: %w", configFile, err)
 	}
 
-	return populateConfig(parsedConfig)
+	conf := Config{
+		ServerAddress:      parsedConfig["server_address"],
+		LogLevel:           parsedConfig["log_level"],
+		DataStoreDirectory: parsedConfig["data_store_directory"],
+	}
+	err = conf.populateConfig(parsedConfig)
+	return &conf, err
 }
 
 // parseConfigLine parses a key=value pair from a line
@@ -79,26 +83,20 @@ func parseConfigLine(line string) (string, string, error) {
 }
 
 // populateConfig maps parsed values to the Conf struct and validates them
-func populateConfig(parsedConfig map[string]string) error {
-	Conf = Config{
-		ServerAddress:      parsedConfig["server_address"],
-		LogLevel:           parsedConfig["log_level"],
-		DataStoreDirectory: parsedConfig["data_store_directory"],
-	}
-
+func (conf *Config) populateConfig(parsedConfig map[string]string) error {
 	if peers, exists := parsedConfig["peer_nodes"]; exists {
-		Conf.PeerNodes = strings.Split(peers, ",")
+		conf.PeerNodes = strings.Split(peers, ",")
 	}
 
-	return validateConfig()
+	return conf.validateConfig()
 }
 
 // validateConfig checks required configurations and ensures values are valid
-func validateConfig() error {
-	if Conf.ServerAddress == "" {
+func (conf *Config) validateConfig() error {
+	if conf.ServerAddress == "" {
 		return errors.New("missing required config: server_address")
 	}
-	if Conf.DataStoreDirectory == "" {
+	if conf.DataStoreDirectory == "" {
 		return errors.New("missing required config: data_store_directory")
 	}
 	return nil

@@ -2,6 +2,7 @@ package server
 
 import (
 	"bufio"
+	"creek/internal/config"
 	"creek/internal/datastore"
 	"creek/internal/handler"
 	"creek/internal/logger"
@@ -19,15 +20,17 @@ type Server struct {
 	listener  net.Listener
 	done      chan struct{}
 	dataStore *datastore.DataStore // Integrated datastore
+	Conf      *config.Config
 }
 
 // New creates a new Server instance
-func New(address string) *Server {
+func New(cfg *config.Config) *Server {
 	return &Server{
-		address:   address,
+		address:   cfg.ServerAddress,
 		clients:   make(map[net.Conn]bool),
 		done:      make(chan struct{}),
 		dataStore: datastore.NewDataStore(), // Initialize datastore
+		Conf:      cfg,
 	}
 }
 

@@ -11,11 +11,10 @@ import (
 
 func main() {
 	// Load configuration
-	err := config.LoadConfig()
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		panic(err)
 	}
-	cfg := config.Conf
 
 	// Initialize logger
 	logger.InitLogger(cfg.LogLevel)
@@ -23,7 +22,7 @@ func main() {
 	log := logger.GetLogger()
 
 	// Create and start TCP server
-	tcpServer := server.New(cfg.ServerAddress)
+	tcpServer := server.New(cfg)
 	go tcpServer.Start()
 
 	// Handle graceful shutdown
