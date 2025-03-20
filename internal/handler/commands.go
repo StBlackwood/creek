@@ -4,14 +4,13 @@ import (
 	"creek/internal/datastore"
 	"creek/internal/version"
 	"errors"
-	"fmt"
 	"strconv"
 )
 
 // handleSet stores a key-value pair
-func handleSet(ds *datastore.DataStore, args []string) (string, error) {
+func handleSet(ds *datastore.DataStore, args []string) error {
 	if len(args) < 3 {
-		return "", errors.New("SET requires a key and a value")
+		return errors.New("SET requires a key and a value")
 	}
 
 	if len(args) == 3 {
@@ -19,11 +18,11 @@ func handleSet(ds *datastore.DataStore, args []string) (string, error) {
 	} else {
 		ttl, err := strconv.Atoi(args[3])
 		if err != nil {
-			return "", errors.New("invalid TTL value")
+			return errors.New("invalid TTL value")
 		}
 		ds.Set(args[1], args[2], ttl)
 	}
-	return fmt.Sprintf("OK: %s set to %s", args[1], args[2]), nil
+	return nil
 }
 
 // handleGet retrieves a value by key
@@ -35,40 +34,40 @@ func handleGet(ds *datastore.DataStore, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("VALUE: %s", value), nil
+	return value, nil
 }
 
 // handleDelete removes a key-value pair
-func handleDelete(ds *datastore.DataStore, args []string) (string, error) {
+func handleDelete(ds *datastore.DataStore, args []string) error {
 	if len(args) < 2 {
-		return "", errors.New("DELETE requires a key")
+		return errors.New("DELETE requires a key")
 	}
 	err := ds.Delete(args[1])
 	if err != nil {
-		return "", err
+		return err
 	}
-	return fmt.Sprintf("OK: %s deleted", args[1]), nil
+	return nil
 }
 
 // handleVersion returns the server version
 func handleVersion() (string, error) {
-	return fmt.Sprintf("Server Version: %s", version.Version), nil
+	return version.Version, nil
 }
 
 // handleExpire sets a TTL on an existing key
-func handleExpire(ds *datastore.DataStore, args []string) (string, error) {
+func handleExpire(ds *datastore.DataStore, args []string) error {
 	if len(args) < 3 {
-		return "", errors.New("EXPIRE requires a key and TTL")
+		return errors.New("EXPIRE requires a key and TTL")
 	}
 	ttl, err := strconv.Atoi(args[2])
 	if err != nil {
-		return "", errors.New("invalid TTL value")
+		return errors.New("invalid TTL value")
 	}
 	err = ds.Expire(args[1], ttl)
 	if err != nil {
-		return "", err
+		return err
 	}
-	return fmt.Sprintf("OK: TTL set to %d seconds", ttl), nil
+	return nil
 }
 
 // handleTTL retrieves the TTL for a key
@@ -80,5 +79,5 @@ func handleTTL(ds *datastore.DataStore, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("TTL: %d seconds", ttl), nil
+	return strconv.Itoa(ttl), nil
 }

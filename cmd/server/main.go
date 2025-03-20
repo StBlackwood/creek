@@ -11,7 +11,11 @@ import (
 
 func main() {
 	// Load configuration
-	cfg := config.LoadConfig()
+	err := config.LoadConfig()
+	if err != nil {
+		panic(err)
+	}
+	cfg := config.Conf
 
 	// Initialize logger
 	logger.InitLogger(cfg.LogLevel)
