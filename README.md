@@ -25,8 +25,12 @@ cd creek
 
 ### **2️⃣ Build and Run**
 ```sh
+make build
+```
+Alternatively, for Windows users without _make_:
+
+```sh
 go build -o creek cmd/server/main.go
-./creek
 ```
 
 ### **3️⃣ Start Multiple Nodes**
