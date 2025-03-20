@@ -107,7 +107,7 @@ func (s *Server) handleClient(conn net.Conn) {
 	for {
 		message, err := reader.ReadString('\n')
 		if err != nil {
-			log.Warn("Client disconnected: ", conn.RemoteAddr())
+			log.Debug("Client disconnected: ", conn.RemoteAddr())
 			s.mu.Lock()
 			delete(s.clients, conn)
 			s.mu.Unlock()
@@ -129,7 +129,7 @@ func (s *Server) handleClient(conn net.Conn) {
 }
 
 func (s *Server) SendMsg(conn net.Conn, response string) {
-	_, err := conn.Write([]byte(response))
+	_, err := conn.Write([]byte(response + "\n"))
 	if err != nil {
 		log := logger.GetLogger()
 		log.Warnf("Error sending msg: %v to client %v", err, conn.RemoteAddr())

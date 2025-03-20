@@ -32,7 +32,7 @@ func handleGet(ds *datastore.DataStore, args []string) (string, error) {
 	}
 	value, err := ds.Get(args[1])
 	if err != nil {
-		return "", err
+		return "", nil // most likely coz of key not present
 	}
 	return value, nil
 }
