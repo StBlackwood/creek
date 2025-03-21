@@ -3,7 +3,7 @@ package test
 import (
 	"bufio"
 	"creek/internal/commons"
-	"creek/internal/core"
+	"creek/internal/server"
 	"net"
 	"strings"
 	"testing"
@@ -26,7 +26,7 @@ func sendRequest(conn net.Conn, request string) (string, error) {
 }
 
 func TestServer_Commands(t *testing.T) {
-	srv := core.New(&SimpleServerConfig)
+	srv := server.New(&SimpleServerConfig)
 	go srv.Start()
 	defer srv.Stop()
 	time.Sleep(1 * time.Second)

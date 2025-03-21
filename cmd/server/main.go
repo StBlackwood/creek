@@ -2,8 +2,8 @@ package main
 
 import (
 	"creek/internal/config"
-	"creek/internal/core"
 	"creek/internal/logger"
+	"creek/internal/server"
 	"os"
 	"os/signal"
 	"syscall"
@@ -22,7 +22,7 @@ func main() {
 	log := logger.GetLogger()
 
 	// Create and start TCP server
-	tcpServer := core.New(cfg)
+	tcpServer := server.New(cfg)
 	go tcpServer.Start()
 
 	// Handle graceful shutdown
