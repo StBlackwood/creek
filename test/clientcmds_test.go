@@ -27,6 +27,7 @@ func sendRequest(conn net.Conn, request string) (string, error) {
 
 func TestServer_Commands(t *testing.T) {
 	srv := server.New(&SimpleServerConfig)
+	defer CleanupAfterTest(&SimpleServerConfig)
 	go srv.Start()
 	defer srv.Stop()
 	time.Sleep(1 * time.Second)

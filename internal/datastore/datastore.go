@@ -3,7 +3,6 @@ package datastore
 import (
 	"creek/internal/config"
 	"creek/internal/logger"
-	"errors"
 	"github.com/sirupsen/logrus"
 	"sync"
 	"time"
@@ -17,48 +16,24 @@ type Entry struct {
 
 // DataStore manages key-value storage with expiration
 type DataStore struct {
-	data      map[string]Entry
-	mu        sync.Mutex
-	stopGC    chan struct{}
-	gcRunning bool
-	log       *logrus.Logger
-	conf      *config.Config
+	data map[string]Entry
+	mu   sync.Mutex
+	log  *logrus.Logger
+	conf *config.Config
 }
 
 // NewDataStore initializes a new datastore instance
 func NewDataStore(config *config.Config) *DataStore {
 	ds := &DataStore{
-		data:   make(map[string]Entry),
-		stopGC: make(chan struct{}),
-		log:    logger.GetLogger(),
-		conf:   config,
+		data: make(map[string]Entry),
+		log:  logger.CreateLogger(config.LogLevel),
+		conf: config,
 	}
-	ds.startGC() // Start garbage collection
 	return ds
 }
 
-// startGC runs garbage collection to remove expired keys
-func (ds *DataStore) startGC() {
-	ds.gcRunning = true
-	go func() {
-		ticker := time.NewTicker(10 * time.Second) // Adjust interval as needed
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				ds.cleanExpiredKeys()
-			case <-ds.stopGC:
-				ds.log.Info("Stopping datastore garbage collection...")
-				ds.gcRunning = false
-				return
-			}
-		}
-	}()
-}
-
-// cleanExpiredKeys removes expired keys from the datastore
-func (ds *DataStore) cleanExpiredKeys() {
+// CleanExpiredKeys removes expired keys from the datastore
+func (ds *DataStore) CleanExpiredKeys() {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
@@ -71,10 +46,23 @@ func (ds *DataStore) cleanExpiredKeys() {
 	}
 }
 
+// GetExpiredKeys gets expired keys as array form the datastore
+func (ds *DataStore) GetExpiredKeys() []string {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+	var expiredKeys []string
+	now := time.Now().Unix()
+	for key, entry := range ds.data {
+		if entry.Expiration > 0 && entry.Expiration <= now {
+			expiredKeys = append(expiredKeys, key)
+		}
+	}
+	return expiredKeys
+}
+
 // Stop gracefully shuts down the datastore and stops GC
 func (ds *DataStore) Stop() {
-	close(ds.stopGC)
-	ds.gcRunning = false
+
 	ds.log.Info("Datastore shutdown complete.")
 }
 
@@ -90,61 +78,55 @@ func (ds *DataStore) Set(key, value string, ttlSeconds int) {
 }
 
 // Get retrieves a value by key
-func (ds *DataStore) Get(key string) (string, error) {
+func (ds *DataStore) Get(key string) string {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 	entry, exists := ds.data[key]
 	if !exists {
-		return "", errors.New("key not found")
+		return ""
 	}
 	// Check if key has expired
 	if entry.Expiration > 0 && entry.Expiration <= time.Now().Unix() {
 		delete(ds.data, key)
-		return "", errors.New("key expired")
+		return ""
 	}
-	return entry.Value, nil
+	return entry.Value
 }
 
 // Delete removes a key-value pair
-func (ds *DataStore) Delete(key string) error {
+func (ds *DataStore) Delete(key string) {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
-	_, exists := ds.data[key]
-	if !exists {
-		return errors.New("key not found")
-	}
 	delete(ds.data, key)
-	return nil
 }
 
 // Expire sets a TTL on an existing key
-func (ds *DataStore) Expire(key string, ttlSeconds int) error {
+func (ds *DataStore) Expire(key string, ttlSeconds int) {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 	entry, exists := ds.data[key]
 	if !exists {
-		return errors.New("key not found")
+		return
 	}
 	entry.Expiration = time.Now().Unix() + int64(ttlSeconds)
 	ds.data[key] = entry
-	return nil
 }
 
 // TTL retrieves the remaining time before a key expires
-func (ds *DataStore) TTL(key string) (int, error) {
+func (ds *DataStore) TTL(key string) int {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 	entry, exists := ds.data[key]
 	if !exists {
-		return -1, errors.New("key not found")
+		return -2
 	}
-	if entry.Expiration == 0 {
-		return -1, errors.New("key has no expiration")
+	if entry.Expiration <= 0 {
+		return -1
 	}
 	remaining := entry.Expiration - time.Now().Unix()
 	if remaining <= 0 {
 		delete(ds.data, key)
-		return -1, errors.New("key expired")
+		return -2
 	}
-	return int(remaining), nil
+	return int(remaining)
 }

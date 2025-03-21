@@ -15,26 +15,31 @@ var (
 // InitLogger initializes the logger with a given log level
 func InitLogger(level string) {
 	once.Do(func() {
-		log = logrus.New()
-		log.SetOutput(os.Stdout)
-		log.SetFormatter(&logrus.JSONFormatter{}) // Structured JSON output
-
-		// Set log level based on input
-		switch level {
-		case "trace":
-			log.SetLevel(logrus.TraceLevel)
-		case "debug":
-			log.SetLevel(logrus.DebugLevel)
-		case "info":
-			log.SetLevel(logrus.InfoLevel)
-		case "warn":
-			log.SetLevel(logrus.WarnLevel)
-		case "error":
-			log.SetLevel(logrus.ErrorLevel)
-		default:
-			log.SetLevel(logrus.InfoLevel) // Default to INFO
-		}
+		log = CreateLogger(level)
 	})
+}
+
+func CreateLogger(level string) *logrus.Logger {
+	log := logrus.New()
+	log.SetOutput(os.Stdout)
+	log.SetFormatter(&logrus.JSONFormatter{}) // Structured JSON output
+
+	// Set log level based on input
+	switch level {
+	case "trace":
+		log.SetLevel(logrus.TraceLevel)
+	case "debug":
+		log.SetLevel(logrus.DebugLevel)
+	case "info":
+		log.SetLevel(logrus.InfoLevel)
+	case "warn":
+		log.SetLevel(logrus.WarnLevel)
+	case "error":
+		log.SetLevel(logrus.ErrorLevel)
+	default:
+		log.SetLevel(logrus.InfoLevel) // Default to INFO
+	}
+	return log
 }
 
 // GetLogger returns the global logger instance
