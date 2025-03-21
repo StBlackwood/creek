@@ -6,6 +6,7 @@ import (
 	"creek/internal/datastore"
 	"creek/internal/logger"
 	"creek/internal/replication"
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"sync"
 	"time"
@@ -118,6 +119,23 @@ func (s *StateMachine) Get(key string) (string, error) {
 func (s *StateMachine) Set(key, value string, ttl int) error {
 	s.p.mu.Lock()
 	defer s.p.mu.Unlock()
+	entry := replication.LogEntry{
+		Timestamp: time.Now().UnixNano(),
+		Operation: "SET",
+		Args:      []string{key, value, fmt.Sprintf("%d", ttl)},
+	}
+
+	err := s.p.lw.Append(entry)
+	if err != nil {
+		return err
+	}
+	if s.writeMode == commons.StrongConsistency {
+		err := s.p.lw.Flush()
+		if err != nil {
+			return err
+		}
+	}
+
 	s.p.ds.Set(key, value, ttl)
 	return nil
 }
@@ -129,6 +147,22 @@ func (s *StateMachine) Delete(key string) error {
 }
 
 func (s *StateMachine) deleteWithoutLock(key string) error {
+	entry := replication.LogEntry{
+		Timestamp: time.Now().UnixNano(),
+		Operation: "DELETE",
+		Args:      []string{key},
+	}
+
+	err := s.p.lw.Append(entry)
+	if err != nil {
+		return err
+	}
+	if s.writeMode == commons.StrongConsistency {
+		err := s.p.lw.Flush()
+		if err != nil {
+			return err
+		}
+	}
 	return s.p.ds.Delete(key)
 }
 
@@ -143,6 +177,23 @@ func (s *StateMachine) Stop() error {
 func (s *StateMachine) Expire(key string) error {
 	s.p.mu.Lock()
 	defer s.p.mu.Unlock()
+
+	entry := replication.LogEntry{
+		Timestamp: time.Now().UnixNano(),
+		Operation: "EXPIRE",
+		Args:      []string{key},
+	}
+
+	err := s.p.lw.Append(entry)
+	if err != nil {
+		return err
+	}
+	if s.writeMode == commons.StrongConsistency {
+		err := s.p.lw.Flush()
+		if err != nil {
+			return err
+		}
+	}
 	return s.p.ds.Expire(key, 0)
 }
 
