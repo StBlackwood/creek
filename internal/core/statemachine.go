@@ -46,7 +46,7 @@ func NewStateMachine(cfg *config.Config) (*StateMachine, error) {
 	sm := &StateMachine{
 		p:         p,
 		writeMode: cfg.WriteConsistencyMode,
-		log:       logger.GetLogger(),
+		log:       logger.CreateLogger(cfg.LogLevel),
 		conf:      cfg,
 
 		stopLWFlush: make(chan struct{}),
@@ -56,6 +56,10 @@ func NewStateMachine(cfg *config.Config) (*StateMachine, error) {
 }
 
 func (s *StateMachine) Start() error {
+	err := s.recoverOnStart()
+	if err != nil {
+		return err
+	}
 	s.startLWFlush()
 	s.startGC() // Start garbage collection
 	return nil
@@ -114,7 +118,7 @@ func (s *StateMachine) startLWFlush() {
 }
 
 func (s *StateMachine) Get(key string) (string, error) {
-	return s.p.ds.Get(key)
+	return s.p.ds.Get(key), nil
 }
 
 func (s *StateMachine) Set(key, value string, ttl int) error {
@@ -164,7 +168,8 @@ func (s *StateMachine) deleteWithoutLock(key string) error {
 			return err
 		}
 	}
-	return s.p.ds.Delete(key)
+	s.p.ds.Delete(key)
+	return nil
 }
 
 func (s *StateMachine) Stop() error {
@@ -195,9 +200,10 @@ func (s *StateMachine) Expire(key string, ttl int) error {
 			return err
 		}
 	}
-	return s.p.ds.Expire(key, ttl)
+	s.p.ds.Expire(key, ttl)
+	return nil
 }
 
 func (s *StateMachine) TTL(key string) (int, error) {
-	return s.p.ds.TTL(key)
+	return s.p.ds.TTL(key), nil
 }

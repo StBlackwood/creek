@@ -3,7 +3,6 @@ package datastore
 import (
 	"creek/internal/config"
 	"creek/internal/logger"
-	"errors"
 	"github.com/sirupsen/logrus"
 	"sync"
 	"time"
@@ -27,7 +26,7 @@ type DataStore struct {
 func NewDataStore(config *config.Config) *DataStore {
 	ds := &DataStore{
 		data: make(map[string]Entry),
-		log:  logger.GetLogger(),
+		log:  logger.CreateLogger(config.LogLevel),
 		conf: config,
 	}
 	return ds
@@ -79,61 +78,55 @@ func (ds *DataStore) Set(key, value string, ttlSeconds int) {
 }
 
 // Get retrieves a value by key
-func (ds *DataStore) Get(key string) (string, error) {
+func (ds *DataStore) Get(key string) string {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 	entry, exists := ds.data[key]
 	if !exists {
-		return "", errors.New("key not found")
+		return ""
 	}
 	// Check if key has expired
 	if entry.Expiration > 0 && entry.Expiration <= time.Now().Unix() {
 		delete(ds.data, key)
-		return "", errors.New("key expired")
+		return ""
 	}
-	return entry.Value, nil
+	return entry.Value
 }
 
 // Delete removes a key-value pair
-func (ds *DataStore) Delete(key string) error {
+func (ds *DataStore) Delete(key string) {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
-	_, exists := ds.data[key]
-	if !exists {
-		return errors.New("key not found")
-	}
 	delete(ds.data, key)
-	return nil
 }
 
 // Expire sets a TTL on an existing key
-func (ds *DataStore) Expire(key string, ttlSeconds int) error {
+func (ds *DataStore) Expire(key string, ttlSeconds int) {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 	entry, exists := ds.data[key]
 	if !exists {
-		return errors.New("key not found")
+		return
 	}
 	entry.Expiration = time.Now().Unix() + int64(ttlSeconds)
 	ds.data[key] = entry
-	return nil
 }
 
 // TTL retrieves the remaining time before a key expires
-func (ds *DataStore) TTL(key string) (int, error) {
+func (ds *DataStore) TTL(key string) int {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 	entry, exists := ds.data[key]
 	if !exists {
-		return -1, errors.New("key not found")
+		return -2
 	}
-	if entry.Expiration == 0 {
-		return -1, errors.New("key has no expiration")
+	if entry.Expiration <= 0 {
+		return -1
 	}
 	remaining := entry.Expiration - time.Now().Unix()
 	if remaining <= 0 {
 		delete(ds.data, key)
-		return -1, errors.New("key expired")
+		return -2
 	}
-	return int(remaining), nil
+	return int(remaining)
 }
