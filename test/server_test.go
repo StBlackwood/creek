@@ -1,14 +1,14 @@
 package test
 
 import (
-	"creek/internal/server"
+	"creek/internal/core"
 	"net"
 	"testing"
 	"time"
 )
 
 func TestServer_StartStop(t *testing.T) {
-	srv := server.New(&SimpleServerConfig)
+	srv := core.New(&SimpleServerConfig)
 	go srv.Start()
 	time.Sleep(1 * time.Second)
 

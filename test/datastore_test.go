@@ -7,7 +7,7 @@ import (
 )
 
 func TestExpireAndTTL(t *testing.T) {
-	ds := datastore.NewDataStore()
+	ds := datastore.NewDataStore(&SimpleServerConfig)
 
 	ds.Set("session", "active", 3)
 

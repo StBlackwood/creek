@@ -1,4 +1,4 @@
-package server
+package core
 
 import (
 	"bufio"
@@ -29,7 +29,7 @@ func New(cfg *config.Config) *Server {
 		address:   cfg.ServerAddress,
 		clients:   make(map[net.Conn]bool),
 		done:      make(chan struct{}),
-		dataStore: datastore.NewDataStore(), // Initialize datastore
+		dataStore: datastore.NewDataStore(cfg), // Initialize datastore
 		Conf:      cfg,
 	}
 }

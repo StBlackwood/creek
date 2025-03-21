@@ -1,6 +1,7 @@
 package datastore
 
 import (
+	"creek/internal/config"
 	"creek/internal/logger"
 	"errors"
 	"github.com/sirupsen/logrus"
@@ -21,14 +22,16 @@ type DataStore struct {
 	stopGC    chan struct{}
 	gcRunning bool
 	log       *logrus.Logger
+	conf      *config.Config
 }
 
 // NewDataStore initializes a new datastore instance
-func NewDataStore() *DataStore {
+func NewDataStore(config *config.Config) *DataStore {
 	ds := &DataStore{
 		data:   make(map[string]Entry),
 		stopGC: make(chan struct{}),
 		log:    logger.GetLogger(),
+		conf:   config,
 	}
 	ds.startGC() // Start garbage collection
 	return ds
