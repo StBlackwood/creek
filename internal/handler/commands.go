@@ -13,15 +13,15 @@ func handleSet(ds *datastore.DataStore, args []string) error {
 		return errors.New("SET requires a key and a value")
 	}
 
-	if len(args) == 3 {
-		ds.Set(args[1], args[2], -1)
-	} else {
-		ttl, err := strconv.Atoi(args[3])
+	ttl := -1
+	if len(args) > 3 {
+		ttlParsed, err := strconv.Atoi(args[3])
 		if err != nil {
 			return errors.New("invalid TTL value")
 		}
-		ds.Set(args[1], args[2], ttl)
+		ttl = ttlParsed
 	}
+	ds.Set(args[1], args[2], ttl)
 	return nil
 }
 

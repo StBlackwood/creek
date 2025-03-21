@@ -28,3 +28,6 @@ go.work.sum
 .idea
 
 target
+
+data_dir
+config/dev.conf

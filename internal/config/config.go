@@ -2,6 +2,7 @@ package config
 
 import (
 	"bufio"
+	"creek/internal/commons"
 	"errors"
 	"fmt"
 	"log"
@@ -14,10 +15,11 @@ const EnvConfigFile = "CREEK_CONF_FILE"
 
 // Config holds application configuration
 type Config struct {
-	ServerAddress      string
-	LogLevel           string
-	PeerNodes          []string
-	DataStoreDirectory string
+	ServerAddress        string
+	LogLevel             string
+	PeerNodes            []string
+	DataStoreDirectory   string
+	WriteConsistencyMode commons.WriteConsistencyMode
 }
 
 // LoadConfig initializes the configuration from a file
@@ -63,6 +65,9 @@ func LoadConfig() (*Config, error) {
 		ServerAddress:      parsedConfig["server_address"],
 		LogLevel:           parsedConfig["log_level"],
 		DataStoreDirectory: parsedConfig["data_store_directory"],
+		WriteConsistencyMode: commons.GetConsistencyModeFromString(
+			parsedConfig["write_consistency_mode"],
+		),
 	}
 	err = conf.populateConfig(parsedConfig)
 	return &conf, err

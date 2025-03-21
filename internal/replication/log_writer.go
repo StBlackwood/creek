@@ -43,8 +43,8 @@ func (t *LogEntryWriter) Append(entry LogEntry) error {
 	logLine := fmt.Sprintf("%d %s %s\n",
 		entry.Timestamp, entry.Operation, strings.Join(entry.Args, " "))
 
-	if _, err := t.logFile.WriteString(logLine); err != nil {
-		return fmt.Errorf("failed to write log entry to file: %w", err)
+	if _, err := t.logFile.Write([]byte(logLine)); err != nil {
+		return fmt.Errorf("failed to write log buffer to file: %w", err)
 	}
 
 	return nil
@@ -53,4 +53,16 @@ func (t *LogEntryWriter) Append(entry LogEntry) error {
 // Close releases resources related to the log file.
 func (t *LogEntryWriter) Close() error {
 	return t.logFile.Close()
+}
+
+// Flush ensures all buffered data is written to the log file.
+func (t *LogEntryWriter) Flush() error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if err := t.logFile.Sync(); err != nil {
+		return fmt.Errorf("failed to flush log file: %w", err)
+	}
+
+	return nil
 }

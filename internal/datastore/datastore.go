@@ -17,48 +17,24 @@ type Entry struct {
 
 // DataStore manages key-value storage with expiration
 type DataStore struct {
-	data      map[string]Entry
-	mu        sync.Mutex
-	stopGC    chan struct{}
-	gcRunning bool
-	log       *logrus.Logger
-	conf      *config.Config
+	data map[string]Entry
+	mu   sync.Mutex
+	log  *logrus.Logger
+	conf *config.Config
 }
 
 // NewDataStore initializes a new datastore instance
 func NewDataStore(config *config.Config) *DataStore {
 	ds := &DataStore{
-		data:   make(map[string]Entry),
-		stopGC: make(chan struct{}),
-		log:    logger.GetLogger(),
-		conf:   config,
+		data: make(map[string]Entry),
+		log:  logger.GetLogger(),
+		conf: config,
 	}
-	ds.startGC() // Start garbage collection
 	return ds
 }
 
-// startGC runs garbage collection to remove expired keys
-func (ds *DataStore) startGC() {
-	ds.gcRunning = true
-	go func() {
-		ticker := time.NewTicker(10 * time.Second) // Adjust interval as needed
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				ds.cleanExpiredKeys()
-			case <-ds.stopGC:
-				ds.log.Info("Stopping datastore garbage collection...")
-				ds.gcRunning = false
-				return
-			}
-		}
-	}()
-}
-
-// cleanExpiredKeys removes expired keys from the datastore
-func (ds *DataStore) cleanExpiredKeys() {
+// CleanExpiredKeys removes expired keys from the datastore
+func (ds *DataStore) CleanExpiredKeys() {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
@@ -73,8 +49,7 @@ func (ds *DataStore) cleanExpiredKeys() {
 
 // Stop gracefully shuts down the datastore and stops GC
 func (ds *DataStore) Stop() {
-	close(ds.stopGC)
-	ds.gcRunning = false
+
 	ds.log.Info("Datastore shutdown complete.")
 }
 
