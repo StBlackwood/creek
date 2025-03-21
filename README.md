@@ -33,7 +33,7 @@ Alternatively, for Windows users without _make_:
 go build -o creek cmd/server/main.go
 ```
 
-### **3️⃣ Start Multiple Nodes**
+### **3️⃣ Start Multiple Nodes (WIP)**
 Each node should have a unique **port** and a list of **peer nodes** for replication.
 
 ```sh
@@ -58,17 +58,14 @@ nc localhost 8080
 ## **🔧 Configuration**
 Creek can be customized via environment variables:
 
-| **Variable**     | **Description**               | **Default** |
-|-----------------|-----------------------------|------------|
-| `SERVER_ADDRESS` | Address to bind the server  | `:8080` |
-| `LOG_LEVEL`     | Logging level (`debug`, `info`, `warn`) | `info` |
-| `PEER_NODES`    | Comma-separated list of peer nodes | _empty_ |
+| **Variable**     | **Description**     | **Default**           |
+|-----------------|---------------------|-----------------------|
+| `CREEK_CONF_FILE` | Path to config file | `config/default.conf` |
+
 
 Example:
 ```sh
-export SERVER_ADDRESS=":8080"
-export LOG_LEVEL="debug"
-export PEER_NODES="localhost:8081,localhost:8082"
+export CREEK_CONF_FILE="config/dev.conf"
 ./creek
 ```
 
@@ -98,11 +95,14 @@ export PEER_NODES="localhost:8081,localhost:8082"
 ✔ **Basic Key-Value Store**  
 ✔ **Replication Across Nodes**  
 ✔ **Garbage Collection for Expired Keys**  
-🔜 **Basic Fault Tolerance**  
+✔ **Persistent Storage through commit logs**  
+✔ **Crash Recovery**
 🔜 **Configurable Consistency Levels**  
+🔜 **Basic Fault Tolerance**  
 🔜 **Automatic Data Partitioning**  
-🔜 **Persistent Storage (BoltDB, Redis)**  
 🔜 **Distributed Transactions**
+
+[Next Roadmap tasks are outlined in a trello board here](`https://trello.com/b/p2PbyoZV`)
 
 ---
 
@@ -113,7 +113,6 @@ We welcome contributions! Please follow these steps:
 3. Write **tests** for new functionality.
 4. Submit a **pull request**.
 
-[Next Roadmap tasks are outlined in a trello board here](`https://trello.com/b/p2PbyoZV`)
 ---
 
 ## **📜 License**
