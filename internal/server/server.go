@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"creek/internal/commons"
 	"creek/internal/config"
-	"creek/internal/datastore"
+	"creek/internal/core"
 	"creek/internal/handler"
 	"creek/internal/logger"
 	"fmt"
@@ -14,23 +14,27 @@ import (
 
 // Server represents a TCP server
 type Server struct {
-	address   string
-	clients   map[net.Conn]bool
-	mu        sync.Mutex
-	listener  net.Listener
-	done      chan struct{}
-	dataStore *datastore.DataStore // Integrated datastore
-	Conf      *config.Config
+	address  string
+	clients  map[net.Conn]bool
+	mu       sync.Mutex
+	listener net.Listener
+	done     chan struct{}
+	Conf     *config.Config
+	sm       *core.StateMachine
 }
 
 // New creates a new Server instance
 func New(cfg *config.Config) *Server {
+
+	stateMachine, err := core.NewStateMachine(cfg)
+	if err != nil {
+	}
 	return &Server{
-		address:   cfg.ServerAddress,
-		clients:   make(map[net.Conn]bool),
-		done:      make(chan struct{}),
-		dataStore: datastore.NewDataStore(cfg), // Initialize datastore
-		Conf:      cfg,
+		address: cfg.ServerAddress,
+		clients: make(map[net.Conn]bool),
+		done:    make(chan struct{}),
+		Conf:    cfg,
+		sm:      stateMachine,
 	}
 }
 
@@ -75,9 +79,12 @@ func (s *Server) Stop() {
 	err := s.listener.Close()
 	if err != nil {
 		log.Errorf("Error closing listener: %v", err)
-		return
 	}
-	s.dataStore.Stop() // Stop datastore and GC
+
+	err = s.sm.Stop()
+	if err != nil {
+		log.Errorf("Error stopping state machine: %v", err)
+	} // Stop datastore and GC
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -86,7 +93,7 @@ func (s *Server) Stop() {
 		err := conn.Close()
 		if err != nil {
 			log.Errorf("Error closing connection: %v", err)
-			return
+			continue
 		}
 	}
 }
@@ -120,7 +127,7 @@ func (s *Server) handleClient(conn net.Conn) {
 		log.Trace("Received from ", conn.RemoteAddr(), ": ", message)
 
 		// Process and respond to message
-		response, err := handler.HandleMessage(s.dataStore, message)
+		response, err := handler.HandleMessage(s.sm, message)
 		if err != nil {
 			log.Warnf("Error handling message: %v", err)
 			s.SendMsg(conn, err.Error())

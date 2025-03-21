@@ -8,6 +8,7 @@ import (
 	"creek/internal/replication"
 	"fmt"
 	"github.com/sirupsen/logrus"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -174,14 +175,14 @@ func (s *StateMachine) Stop() error {
 	return s.p.lw.Close()
 }
 
-func (s *StateMachine) Expire(key string) error {
+func (s *StateMachine) Expire(key string, ttl int) error {
 	s.p.mu.Lock()
 	defer s.p.mu.Unlock()
 
 	entry := replication.LogEntry{
 		Timestamp: time.Now().UnixNano(),
 		Operation: "EXPIRE",
-		Args:      []string{key},
+		Args:      []string{key, strconv.Itoa(ttl)},
 	}
 
 	err := s.p.lw.Append(entry)
@@ -194,7 +195,7 @@ func (s *StateMachine) Expire(key string) error {
 			return err
 		}
 	}
-	return s.p.ds.Expire(key, 0)
+	return s.p.ds.Expire(key, ttl)
 }
 
 func (s *StateMachine) TTL(key string) (int, error) {

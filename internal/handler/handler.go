@@ -1,14 +1,14 @@
 package handler
 
 import (
-	"creek/internal/datastore"
+	"creek/internal/core"
 	"creek/internal/logger"
 	"errors"
 	"strings"
 )
 
 // HandleMessage processes incoming messages from clients
-func HandleMessage(store *datastore.DataStore, message string) (string, error) {
+func HandleMessage(sm *core.StateMachine, message string) (string, error) {
 	// Trim and split input into arguments
 	args := strings.Fields(strings.TrimSpace(message))
 	if len(args) == 0 {
@@ -19,34 +19,34 @@ func HandleMessage(store *datastore.DataStore, message string) (string, error) {
 	command := strings.ToUpper(args[0])
 
 	// Route to appropriate command handler
-	return handleCommand(store, command, args)
+	return handleCommand(sm, command, args)
 }
 
-type handlerFunc func(store *datastore.DataStore, args []string) (string, error)
+type handlerFunc func(sm *core.StateMachine, args []string) (string, error)
 
 var commandHandlers = map[string]handlerFunc{
-	"SET": func(store *datastore.DataStore, args []string) (string, error) { return "OK", handleSet(store, args) },
+	"SET": func(sm *core.StateMachine, args []string) (string, error) { return "OK", handleSet(sm, args) },
 
-	"DELETE": func(store *datastore.DataStore, args []string) (string, error) {
-		return "OK", handleDelete(store, args)
+	"DELETE": func(sm *core.StateMachine, args []string) (string, error) {
+		return "OK", handleDelete(sm, args)
 	},
-	"EXPIRE": func(store *datastore.DataStore, args []string) (string, error) {
-		return "OK", handleExpire(store, args)
+	"EXPIRE": func(sm *core.StateMachine, args []string) (string, error) {
+		return "OK", handleExpire(sm, args)
 	},
 	"TTL": handleTTL,
 	"GET": handleGet,
-	"VERSION": func(store *datastore.DataStore, args []string) (string, error) {
+	"VERSION": func(sm *core.StateMachine, args []string) (string, error) {
 		return handleVersion()
 	},
-	"PING": func(store *datastore.DataStore, args []string) (string, error) {
+	"PING": func(sm *core.StateMachine, args []string) (string, error) {
 		return "PONG", nil
 	},
 }
 
-func handleCommand(store *datastore.DataStore, command string, args []string) (string, error) {
+func handleCommand(sm *core.StateMachine, command string, args []string) (string, error) {
 	log := logger.GetLogger()
 	if handler, exists := commandHandlers[command]; exists {
-		return handler(store, args)
+		return handler(sm, args)
 	}
 
 	log.Warn("Unknown command received: ", command)

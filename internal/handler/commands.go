@@ -2,13 +2,13 @@ package handler
 
 import (
 	"creek/internal/commons"
-	"creek/internal/datastore"
+	"creek/internal/core"
 	"errors"
 	"strconv"
 )
 
 // handleSet stores a key-value pair
-func handleSet(ds *datastore.DataStore, args []string) error {
+func handleSet(sm *core.StateMachine, args []string) error {
 	if len(args) < 3 {
 		return errors.New("SET requires a key and a value")
 	}
@@ -21,16 +21,15 @@ func handleSet(ds *datastore.DataStore, args []string) error {
 		}
 		ttl = ttlParsed
 	}
-	ds.Set(args[1], args[2], ttl)
-	return nil
+	return sm.Set(args[1], args[2], ttl)
 }
 
 // handleGet retrieves a value by key
-func handleGet(ds *datastore.DataStore, args []string) (string, error) {
+func handleGet(sm *core.StateMachine, args []string) (string, error) {
 	if len(args) < 2 {
 		return "", errors.New("GET requires a key")
 	}
-	value, err := ds.Get(args[1])
+	value, err := sm.Get(args[1])
 	if err != nil {
 		return "", nil // most likely coz of key not present
 	}
@@ -38,11 +37,11 @@ func handleGet(ds *datastore.DataStore, args []string) (string, error) {
 }
 
 // handleDelete removes a key-value pair
-func handleDelete(ds *datastore.DataStore, args []string) error {
+func handleDelete(sm *core.StateMachine, args []string) error {
 	if len(args) < 2 {
 		return errors.New("DELETE requires a key")
 	}
-	err := ds.Delete(args[1])
+	err := sm.Delete(args[1])
 	if err != nil {
 		return err
 	}
@@ -55,7 +54,7 @@ func handleVersion() (string, error) {
 }
 
 // handleExpire sets a TTL on an existing key
-func handleExpire(ds *datastore.DataStore, args []string) error {
+func handleExpire(sm *core.StateMachine, args []string) error {
 	if len(args) < 3 {
 		return errors.New("EXPIRE requires a key and TTL")
 	}
@@ -63,7 +62,7 @@ func handleExpire(ds *datastore.DataStore, args []string) error {
 	if err != nil {
 		return errors.New("invalid TTL value")
 	}
-	err = ds.Expire(args[1], ttl)
+	err = sm.Expire(args[1], ttl)
 	if err != nil {
 		return err
 	}
@@ -71,11 +70,11 @@ func handleExpire(ds *datastore.DataStore, args []string) error {
 }
 
 // handleTTL retrieves the TTL for a key
-func handleTTL(ds *datastore.DataStore, args []string) (string, error) {
+func handleTTL(sm *core.StateMachine, args []string) (string, error) {
 	if len(args) < 2 {
 		return "", errors.New("TTL requires a key")
 	}
-	ttl, err := ds.TTL(args[1])
+	ttl, err := sm.TTL(args[1])
 	if err != nil {
 		return "", err
 	}
