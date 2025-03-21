@@ -9,6 +9,7 @@ import (
 
 func TestServer_StartStop(t *testing.T) {
 	srv := server.New(&SimpleServerConfig)
+	defer CleanupAfterTest(&SimpleServerConfig)
 	go srv.Start()
 	time.Sleep(1 * time.Second)
 

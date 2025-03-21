@@ -28,6 +28,7 @@ func New(cfg *config.Config) *Server {
 
 	stateMachine, err := core.NewStateMachine(cfg)
 	if err != nil {
+		panic(err)
 	}
 	return &Server{
 		address: cfg.ServerAddress,
