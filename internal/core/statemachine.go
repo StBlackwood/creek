@@ -68,15 +68,26 @@ func (s *StateMachine) startGC() {
 		for {
 			select {
 			case <-ticker.C:
-				s.p.mu.Lock()
-				s.p.ds.CleanExpiredKeys()
-				s.p.mu.Unlock()
+				s.cleanExpiredKeys()
 			case <-s.stopGC:
 				s.log.Info("Stopping datastore garbage collection...")
 				return
 			}
 		}
 	}()
+}
+
+func (s *StateMachine) cleanExpiredKeys() {
+	s.p.mu.Lock()
+	defer s.p.mu.Unlock()
+	expiredKeys := s.p.ds.GetExpiredKeys()
+	for _, key := range expiredKeys {
+		err := s.deleteWithoutLock(key)
+		if err != nil {
+			s.log.Warnf("Error deleting expired key: %v", err)
+			continue
+		}
+	}
 }
 
 func (s *StateMachine) startLWFlush() {
@@ -103,12 +114,21 @@ func (s *StateMachine) startLWFlush() {
 func (s *StateMachine) Get(key string) (string, error) {
 	return s.p.ds.Get(key)
 }
+
 func (s *StateMachine) Set(key, value string, ttl int) error {
+	s.p.mu.Lock()
+	defer s.p.mu.Unlock()
 	s.p.ds.Set(key, value, ttl)
 	return nil
 }
 
 func (s *StateMachine) Delete(key string) error {
+	s.p.mu.Lock()
+	defer s.p.mu.Unlock()
+	return s.deleteWithoutLock(key)
+}
+
+func (s *StateMachine) deleteWithoutLock(key string) error {
 	return s.p.ds.Delete(key)
 }
 
@@ -121,6 +141,8 @@ func (s *StateMachine) Stop() error {
 }
 
 func (s *StateMachine) Expire(key string) error {
+	s.p.mu.Lock()
+	defer s.p.mu.Unlock()
 	return s.p.ds.Expire(key, 0)
 }
 

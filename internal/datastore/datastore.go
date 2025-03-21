@@ -47,6 +47,20 @@ func (ds *DataStore) CleanExpiredKeys() {
 	}
 }
 
+// GetExpiredKeys gets expired keys as array form the datastore
+func (ds *DataStore) GetExpiredKeys() []string {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+	var expiredKeys []string
+	now := time.Now().Unix()
+	for key, entry := range ds.data {
+		if entry.Expiration > 0 && entry.Expiration <= now {
+			expiredKeys = append(expiredKeys, key)
+		}
+	}
+	return expiredKeys
+}
+
 // Stop gracefully shuts down the datastore and stops GC
 func (ds *DataStore) Stop() {
 
