@@ -113,6 +113,7 @@ We welcome contributions! Please follow these steps:
 3. Write **tests** for new functionality.
 4. Submit a **pull request**.
 
+[Next Roadmap tasks are outlined in a trello board here](`https://trello.com/b/p2PbyoZV`)
 ---
 
 ## **📜 License**
