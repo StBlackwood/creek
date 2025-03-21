@@ -2,6 +2,7 @@ package test
 
 import (
 	"bufio"
+	"creek/internal/commons"
 	"creek/internal/server"
 	"net"
 	"strings"
@@ -84,7 +85,7 @@ func TestServer_Commands(t *testing.T) {
 
 	// Test VERSION
 	response, err = sendRequest(conn, "version")
-	if err != nil || !strings.HasPrefix(response, "1.0.") {
+	if err != nil || response != commons.Version {
 		t.Errorf("VERSION response incorrect: %s", response)
 	}
 

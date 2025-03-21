@@ -1,3 +1,3 @@
-package version
+package commons
 
 const Version = "1.0.0"

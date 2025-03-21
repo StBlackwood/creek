@@ -2,11 +2,11 @@ package server
 
 import (
 	"bufio"
+	"creek/internal/commons"
 	"creek/internal/config"
 	"creek/internal/datastore"
 	"creek/internal/handler"
 	"creek/internal/logger"
-	"creek/internal/version"
 	"fmt"
 	"net"
 	"sync"
@@ -102,7 +102,7 @@ func (s *Server) handleClient(conn net.Conn) {
 		}
 	}(conn)
 
-	versionMsg := fmt.Sprintf("Connected to Server Version: %s\n", version.Version)
+	versionMsg := fmt.Sprintf("Connected to Server Version: %s\n", commons.Version)
 
 	s.SendMsg(conn, versionMsg)
 

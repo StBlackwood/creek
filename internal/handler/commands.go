@@ -1,8 +1,8 @@
 package handler
 
 import (
+	"creek/internal/commons"
 	"creek/internal/datastore"
-	"creek/internal/version"
 	"errors"
 	"strconv"
 )
@@ -49,9 +49,9 @@ func handleDelete(ds *datastore.DataStore, args []string) error {
 	return nil
 }
 
-// handleVersion returns the server version
+// handleVersion returns the server commons
 func handleVersion() (string, error) {
-	return version.Version, nil
+	return commons.Version, nil
 }
 
 // handleExpire sets a TTL on an existing key
