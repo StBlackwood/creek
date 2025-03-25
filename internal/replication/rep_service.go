@@ -4,6 +4,7 @@ import (
 	"creek/internal/commons"
 	"creek/internal/config"
 	"creek/internal/logger"
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"net"
 	"sync"
@@ -27,13 +28,13 @@ func (qs *RepService) GetNodes(partitionId int) []*Node {
 	}
 	return nodes
 }
-func NewRepService(cfg *config.Config) *RepService {
+func NewRepService(cfg *config.Config) (*RepService, error) {
 	qs := &RepService{
 		Nodes: make(map[string]*Node),
 		Conf:  cfg,
 		log:   logger.CreateLogger(cfg.LogLevel),
 	}
-	return qs
+	return qs, nil
 }
 
 func (qs *RepService) ConnectToFollowers() {
@@ -63,4 +64,37 @@ func (qs *RepService) addNode(node *Node) {
 	qs.mu.Lock()
 	defer qs.mu.Unlock()
 	qs.Nodes[node.Id] = node
+}
+
+func (qs *RepService) HandleRepCmdWrite(cmd *RepCmd) error {
+	nodes := qs.GetNodes(cmd.PartitionId)
+	for _, node := range nodes {
+		err := node.SendRepCmd(cmd)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (qs *RepService) Stop() error {
+	qs.mu.Lock()
+	defer qs.mu.Unlock()
+
+	isError := false
+
+	for id, node := range qs.Nodes {
+		err := node.Close()
+		if err != nil {
+			qs.log.Errorf("Error closing node %s: %v", id, err)
+			isError = true
+			continue
+		}
+		delete(qs.Nodes, id)
+	}
+	qs.log.Info("Disconnected from all nodes.")
+	if isError {
+		return fmt.Errorf("error closing few nodes")
+	}
+	return nil
 }

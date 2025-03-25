@@ -1,6 +1,7 @@
 package replication
 
 import (
+	"creek/internal/commons"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -17,7 +18,8 @@ type RepCmd struct {
 
 func (rm *RepCmd) String() string {
 	return fmt.Sprintf(
-		"%d %s %d %s %s\n",
+		"%s %d %s %d %s %s\n",
+		commons.SysRepMsg,
 		rm.PartitionId,
 		rm.NodeId,
 		rm.Timestamp,
@@ -29,12 +31,24 @@ func (rm *RepCmd) String() string {
 func RepCmdFromString(s string) (*RepCmd, error) {
 	s = strings.TrimSpace(s)
 
+	// Extract SysRepMsg
+	sysRepEnd := strings.IndexByte(s, ' ')
+	if sysRepEnd == -1 {
+		return nil, fmt.Errorf("invalid format: missing fields")
+	}
+	sysRepMsg := s[:sysRepEnd]
+	if sysRepMsg != commons.SysRepMsg {
+		return nil, fmt.Errorf("invalid format: invalid SysRepMsg")
+	}
+
 	// Extract PartitionId
-	partitionEnd := strings.IndexByte(s, ' ')
+	partitionStart := sysRepEnd + 1
+	partitionEnd := strings.IndexByte(s[partitionStart:], ' ')
 	if partitionEnd == -1 {
 		return nil, fmt.Errorf("invalid format: missing fields")
 	}
-	partitionId, err := strconv.Atoi(s[:partitionEnd])
+	partitionEnd += partitionStart
+	partitionId, err := strconv.Atoi(s[partitionStart:partitionEnd])
 	if err != nil {
 		return nil, fmt.Errorf("invalid PartitionId: %v", err)
 	}
@@ -97,4 +111,30 @@ func (rm *RepCmd) Equals(other *RepCmd) bool {
 		rm.Timestamp == other.Timestamp &&
 		rm.Operation == other.Operation &&
 		reflect.DeepEqual(rm.Args, other.Args)
+}
+
+func RepCmdFromArgs(args []string) (*RepCmd, error) {
+	if len(args) < 5 {
+		return nil, fmt.Errorf("invalid input: expected at least 5 arguments, got %d", len(args))
+	}
+
+	// Extract PartitionId
+	partitionId, err := strconv.Atoi(args[0])
+	if err != nil {
+		return nil, fmt.Errorf("invalid PartitionId: %v", err)
+	}
+
+	// Extract Timestamp
+	timestamp, err := strconv.ParseInt(args[2], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid Timestamp: %v", err)
+	}
+
+	return &RepCmd{
+		PartitionId: partitionId,
+		NodeId:      args[1],
+		Timestamp:   timestamp,
+		Operation:   args[3],
+		Args:        args[4:],
+	}, nil
 }

@@ -25,17 +25,9 @@ type StateMachine struct {
 
 func NewStateMachine(cfg *config.Config) (*StateMachine, error) {
 
-	logFileName := "commit.log"
-	logFilePath := cfg.DataStoreDirectory + "/" + logFileName
-	writer, err := replication.NewLogEntryWriter(logFilePath)
-	if err != nil {
-		return nil, err
-	}
+	store := datastore.NewDataStore(cfg)
+	p, _ := replication.NewPartition(0, cfg, store)
 
-	p := &replication.Partition{
-		LW: writer,
-		DS: datastore.NewDataStore(cfg),
-	}
 	sm := &StateMachine{
 		p:         p,
 		writeMode: cfg.WriteConsistencyMode,
@@ -170,6 +162,7 @@ func (s *StateMachine) Stop() error {
 	s.p.DS.Stop()
 	close(s.stopLWFlush)
 	close(s.stopGC)
+	s.p.StopPartition()
 	return s.p.LW.Close()
 }
 
@@ -199,4 +192,10 @@ func (s *StateMachine) Expire(key string, ttl int) error {
 
 func (s *StateMachine) TTL(key string) (int, error) {
 	return s.p.DS.TTL(key), nil
+}
+
+func (s *StateMachine) AttachRepCmdWriteHandlerToPartitions(handler replication.PartitionRepCmdWriteHandler) {
+	// loop through all partitions
+
+	s.p.AttachRepCmdWriteHandler(handler)
 }

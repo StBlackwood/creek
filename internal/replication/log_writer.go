@@ -21,8 +21,8 @@ type LogEntryWriter struct {
 	logFilePath string
 }
 
-// NewLogEntryWriter initializes a transaction log and opens the file for writing.
-func NewLogEntryWriter(filePath string) (*LogEntryWriter, error) {
+// newLogEntryWriter initializes a transaction log and opens the file for writing.
+func newLogEntryWriter(filePath string) (*LogEntryWriter, error) {
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open log file: %w", err)

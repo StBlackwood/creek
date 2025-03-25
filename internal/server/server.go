@@ -6,6 +6,7 @@ import (
 	"creek/internal/config"
 	"creek/internal/core"
 	"creek/internal/logger"
+	"creek/internal/replication"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"net"
@@ -21,6 +22,7 @@ type Server struct {
 	done     chan struct{}
 	Conf     *config.Config
 	sm       *core.StateMachine
+	rs       *replication.RepService
 	log      *logrus.Logger
 }
 
@@ -31,7 +33,8 @@ func New(cfg *config.Config) *Server {
 	if err != nil {
 		panic(err)
 	}
-	err = stateMachine.Start()
+
+	replicationService, err := replication.NewRepService(cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -42,14 +45,25 @@ func New(cfg *config.Config) *Server {
 		done:    make(chan struct{}),
 		Conf:    cfg,
 		sm:      stateMachine,
+		rs:      replicationService,
 		log:     logger.CreateLogger(cfg.LogLevel),
 	}
 }
 
 // Start begins listening for TCP connections
 func (s *Server) Start() {
-
 	var err error
+
+	err = s.sm.Start()
+	if err != nil {
+		panic(err)
+	}
+
+	s.rs.ConnectToFollowers()
+	s.sm.AttachRepCmdWriteHandlerToPartitions(func(cmd *replication.RepCmd) error {
+		return s.rs.HandleRepCmdWrite(cmd)
+	})
+
 	s.listener, err = net.Listen("tcp", s.address)
 	if err != nil {
 		s.log.Fatalf("Error starting server: %v", err)
@@ -91,6 +105,11 @@ func (s *Server) Stop() {
 	if err != nil {
 		s.log.Errorf("Error stopping state machine: %v", err)
 	} // Stop datastore and GC
+
+	err = s.rs.Stop()
+	if err != nil {
+		s.log.Errorf("Error stopping replication service: %v", err)
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
