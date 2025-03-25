@@ -10,6 +10,7 @@ import (
 )
 
 func TestServer_Recovery(t *testing.T) {
+	setupTest(&SimpleServerConfig)
 	defer cleanupAfterTest(&SimpleServerConfig)
 	srv := server.New(&SimpleServerConfig)
 	go srv.Start()

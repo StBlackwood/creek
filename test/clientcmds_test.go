@@ -10,6 +10,7 @@ import (
 )
 
 func TestServer_Commands(t *testing.T) {
+	setupTest(&SimpleServerConfig)
 	srv := server.New(&SimpleServerConfig)
 	defer cleanupAfterTest(&SimpleServerConfig)
 	go srv.Start()
