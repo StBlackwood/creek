@@ -3,7 +3,6 @@ package replication
 import (
 	"fmt"
 	"net"
-	"strings"
 )
 
 type Node struct {
@@ -18,8 +17,7 @@ func (n *Node) String() string {
 	return n.Id
 }
 
-func (n *Node) WriteData(msg string) error {
-	msg = strings.TrimSpace(msg)
+func (n *Node) writeData(msg string) error {
 	if msg == "" {
 		return nil
 	}
@@ -40,5 +38,5 @@ func (n *Node) SendRepCmd(cmd *RepCmd) error {
 		return fmt.Errorf("node is not connected")
 	}
 
-	return n.WriteData(cmd.String())
+	return n.writeData(cmd.String())
 }

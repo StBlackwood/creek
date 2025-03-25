@@ -127,6 +127,15 @@ func (s *StateMachine) Set(key, value string, ttl int) error {
 	}
 
 	s.p.DS.Set(key, value, ttl)
+	s.p.SendWriteCommand(
+		&replication.RepCmd{
+			NodeId:      "owner",
+			PartitionId: 0,
+			Timestamp:   time.Now().UnixNano(),
+			Operation:   "SET",
+			Args:        []string{key, value, fmt.Sprintf("%d", ttl)},
+		},
+	)
 	return nil
 }
 

@@ -49,13 +49,14 @@ func (qs *RepService) ConnectToFollowers() {
 				qs.log.Errorf("Failed to connect to peer %s: %v", address, err)
 				return
 			}
-			qs.addNode(&Node{
+			node := &Node{
 				Id:       address,
 				Address:  address,
 				conn:     conn,
 				IsSelf:   false,
 				IsLeader: false,
-			})
+			}
+			qs.addNode(node)
 		}(addr)
 	}
 }
@@ -69,6 +70,7 @@ func (qs *RepService) addNode(node *Node) {
 func (qs *RepService) HandleRepCmdWrite(cmd *RepCmd) error {
 	nodes := qs.GetNodes(cmd.PartitionId)
 	for _, node := range nodes {
+		qs.log.Tracef("Sending write command to node: %v", node)
 		err := node.SendRepCmd(cmd)
 		if err != nil {
 			return err
