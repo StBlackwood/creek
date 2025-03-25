@@ -29,12 +29,12 @@ type Server struct {
 // New creates a new Server instance
 func New(cfg *config.Config) *Server {
 
-	stateMachine, err := core.NewStateMachine(cfg)
+	replicationService, err := replication.NewRepService(cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	replicationService, err := replication.NewRepService(cfg)
+	stateMachine, err := core.NewStateMachine(replicationService.GetSelfNodeId(), cfg)
 	if err != nil {
 		panic(err)
 	}

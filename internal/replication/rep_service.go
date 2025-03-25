@@ -100,3 +100,7 @@ func (qs *RepService) Stop() error {
 	}
 	return nil
 }
+
+func (qs *RepService) GetSelfNodeId() string {
+	return qs.Conf.ServerAddress
+}

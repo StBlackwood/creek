@@ -16,10 +16,12 @@ import (
 type RepCmdWriteHandler func(cmd *replication.RepCmd) error
 
 type Partition struct {
+	Id         int
+	SelfNodeId string
+
 	lw *LogEntryWriter
 	ds *datastore.DataStore
 	mu sync.Mutex
-	Id int
 
 	partitionMode commons.PartitionMode
 	writeMode     commons.WriteConsistencyMode
@@ -43,7 +45,7 @@ func (p *Partition) SendWriteCommand(cmd *replication.RepCmd) {
 }
 
 // NewPartition initializes a Partition with a custom handler for processing commands.
-func NewPartition(id int, cfg *config.Config, ds *datastore.DataStore) (*Partition, error) {
+func NewPartition(id int, nodeId string, cfg *config.Config, ds *datastore.DataStore) (*Partition, error) {
 	logFileName := "commit.log"
 	logFilePath := cfg.DataStoreDirectory + "/" + logFileName
 	writer, err := newLogEntryWriter(logFilePath)
@@ -52,9 +54,10 @@ func NewPartition(id int, cfg *config.Config, ds *datastore.DataStore) (*Partiti
 	}
 
 	p := &Partition{
+		Id:            id,
+		SelfNodeId:    nodeId,
 		lw:            writer, // Assume LogEntryWriter is initialized elsewhere
 		ds:            ds,
-		Id:            id,
 		partitionMode: cfg.ServerMode,
 		log:           logger.CreateLogger(cfg.LogLevel),
 		writeChan:     make(chan *replication.RepCmd, 100), // Buffered channel for async writes
@@ -72,7 +75,9 @@ func (p *Partition) Start() error {
 		return err
 	}
 	p.startLWFlush()
-	p.startGC() // Start garbage collection
+	if p.partitionMode == commons.Leader {
+		p.startGC() // Start garbage collection only in leader mode. followers will receive expire deletes from leader
+	}
 	return nil
 }
 
@@ -98,39 +103,6 @@ func (p *Partition) StopPartition() error {
 	close(p.stopGC)
 	close(p.writeChan)
 	return p.lw.Close()
-}
-
-func (p *Partition) Set(key, value string, ttl int) error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	entry := LogEntry{
-		Timestamp: time.Now().UnixNano(),
-		Operation: "SET",
-		Args:      []string{key, value, fmt.Sprintf("%d", ttl)},
-	}
-
-	err := p.lw.Append(entry)
-	if err != nil {
-		return err
-	}
-	if p.writeMode == commons.StrongConsistency {
-		err := p.lw.Flush()
-		if err != nil {
-			return err
-		}
-	}
-
-	p.ds.Set(key, value, ttl)
-	p.SendWriteCommand(
-		&replication.RepCmd{
-			Origin:      "owner",
-			PartitionId: 0,
-			Timestamp:   time.Now().UnixNano(),
-			Operation:   "SET",
-			Args:        []string{key, value, fmt.Sprintf("%d", ttl)},
-		},
-	)
-	return nil
 }
 
 func (p *Partition) startLWFlush() {
@@ -184,10 +156,57 @@ func (p *Partition) cleanExpiredKeys() {
 	}
 }
 
+func (p *Partition) Set(key, value string, ttl int) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	entry := LogEntry{
+		Timestamp: time.Now().UnixNano(),
+		Operation: commons.CmdDataSet,
+		Args:      []string{key, value, fmt.Sprintf("%d", ttl)},
+	}
+
+	err := p.lw.Append(entry)
+	if err != nil {
+		return err
+	}
+	if p.writeMode == commons.StrongConsistency {
+		err := p.lw.Flush()
+		if err != nil {
+			return err
+		}
+	}
+
+	p.ds.Set(key, value, ttl)
+	p.SendWriteCommand(
+		&replication.RepCmd{
+			Origin:      p.SelfNodeId,
+			PartitionId: p.Id,
+			Timestamp:   time.Now().UnixNano(),
+			Operation:   commons.CmdDataSet,
+			Args:        []string{key, value, fmt.Sprintf("%d", ttl)},
+		},
+	)
+	return nil
+}
+
+func (p *Partition) Get(key string) (string, error) {
+	if p.partitionMode == commons.Follower {
+		return p.ds.GetWithoutTTL(key), nil
+	}
+	//
+	return p.ds.Get(key), nil
+}
+
+func (p *Partition) Delete(key string) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.deleteWithoutLock(key)
+}
+
 func (p *Partition) deleteWithoutLock(key string) error {
 	entry := LogEntry{
 		Timestamp: time.Now().UnixNano(),
-		Operation: "DELETE",
+		Operation: commons.CmdDataDel,
 		Args:      []string{key},
 	}
 
@@ -202,17 +221,16 @@ func (p *Partition) deleteWithoutLock(key string) error {
 		}
 	}
 	p.ds.Delete(key)
+
+	p.SendWriteCommand(
+		&replication.RepCmd{
+			Origin:      p.SelfNodeId,
+			PartitionId: p.Id,
+			Timestamp:   time.Now().UnixNano(),
+			Operation:   commons.CmdDataDel,
+			Args:        []string{key},
+		})
 	return nil
-}
-
-func (p *Partition) Get(key string) (string, error) {
-	return p.ds.Get(key), nil
-}
-
-func (p *Partition) Delete(key string) error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	return p.deleteWithoutLock(key)
 }
 
 func (p *Partition) Expire(key string, ttl int) error {
@@ -221,7 +239,7 @@ func (p *Partition) Expire(key string, ttl int) error {
 
 	entry := LogEntry{
 		Timestamp: time.Now().UnixNano(),
-		Operation: "EXPIRE",
+		Operation: commons.CmdDataEXP,
 		Args:      []string{key, strconv.Itoa(ttl)},
 	}
 
@@ -236,9 +254,60 @@ func (p *Partition) Expire(key string, ttl int) error {
 		}
 	}
 	p.ds.Expire(key, ttl)
+
+	p.SendWriteCommand(
+		&replication.RepCmd{
+			Origin:      p.SelfNodeId,
+			PartitionId: p.Id,
+			Timestamp:   time.Now().UnixNano(),
+			Operation:   commons.CmdDataEXP,
+			Args:        []string{key, strconv.Itoa(ttl)},
+		})
 	return nil
 }
 
 func (p *Partition) TTL(key string) (int, error) {
 	return p.ds.TTL(key), nil
+}
+
+func (p *Partition) ProcessRepCmd(cmd *replication.RepCmd) error {
+	if p.partitionMode == commons.Leader {
+		return fmt.Errorf("partition is not in follower mode to accept replication commands")
+	}
+
+	switch cmd.Operation {
+	case commons.CmdDataSet:
+		if len(cmd.Args) < 2 {
+			return fmt.Errorf("invalid args in rep command: %s", cmd.String())
+		}
+		key, value := cmd.Args[0], cmd.Args[1]
+		ttl := -1
+		if len(cmd.Args) > 2 {
+			parsedTTL, err := strconv.Atoi(cmd.Args[2])
+			if err == nil {
+				ttl = parsedTTL
+			}
+		}
+		return p.Set(key, value, ttl)
+
+	case commons.CmdDataDel:
+		if len(cmd.Args) < 1 {
+			return fmt.Errorf("invalid args in rep command: %s", cmd.String())
+		}
+		return p.Delete(cmd.Args[0])
+
+	case commons.CmdDataEXP:
+		if len(cmd.Args) < 2 {
+			return fmt.Errorf("invalid args in rep command: %s", cmd.String())
+		}
+		key := cmd.Args[0]
+		ttl, err := strconv.Atoi(cmd.Args[1])
+		if err != nil {
+			return fmt.Errorf("invalid args in rep command: %s", cmd.String())
+		}
+		return p.Expire(key, ttl)
+
+	default:
+		return fmt.Errorf("invalid operation in rep command: %s", cmd.String())
+	}
 }

@@ -2,6 +2,7 @@ package partition
 
 import (
 	"bufio"
+	"creek/internal/commons"
 	"fmt"
 	"io"
 	"os"
@@ -79,7 +80,7 @@ func (p *Partition) processBatch(entries *[]string) {
 
 func (p *Partition) processLogEntry(timestamp int64, operation string, args []string, now int64) {
 	switch operation {
-	case "SET":
+	case commons.CmdDataSet:
 		if len(args) < 2 {
 			return
 		}
@@ -97,13 +98,13 @@ func (p *Partition) processLogEntry(timestamp int64, operation string, args []st
 			p.ds.Set(key, value, ttl-(int(now-timestamp)/int(time.Second)))
 		}
 
-	case "DELETE":
+	case commons.CmdDataDel:
 		if len(args) < 1 {
 			return
 		}
 		p.ds.Delete(args[0])
 
-	case "EXPIRE":
+	case commons.CmdDataEXP:
 		if len(args) < 2 {
 			return
 		}

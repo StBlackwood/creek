@@ -93,6 +93,16 @@ func (ds *DataStore) Get(key string) string {
 	return entry.Value
 }
 
+func (ds *DataStore) GetWithoutTTL(key string) string {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+	entry, exists := ds.data[key]
+	if !exists {
+		return ""
+	}
+	return entry.Value
+}
+
 // Delete removes a key-value pair
 func (ds *DataStore) Delete(key string) {
 	ds.mu.Lock()

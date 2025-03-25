@@ -10,6 +10,6 @@ func handleRepCommand(s *Server, args []string) error {
 		return err
 	}
 
-	s.log.Debugf("Received replication command: %v", repCmd)
-	return nil
+	err = s.sm.ProcessRepCmd(repCmd)
+	return err
 }
