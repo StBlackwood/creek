@@ -10,7 +10,7 @@ import (
 
 type RepCmd struct {
 	PartitionId int
-	NodeId      string
+	Origin      string
 	Timestamp   int64
 	Operation   string
 	Args        []string
@@ -19,9 +19,9 @@ type RepCmd struct {
 func (rm *RepCmd) String() string {
 	return fmt.Sprintf(
 		"%s %d %s %d %s %s\n",
-		commons.SysRepMsg,
+		commons.CmdSysRep,
 		rm.PartitionId,
-		rm.NodeId,
+		rm.Origin,
 		rm.Timestamp,
 		rm.Operation,
 		strings.Join(rm.Args, " "),
@@ -31,14 +31,14 @@ func (rm *RepCmd) String() string {
 func RepCmdFromString(s string) (*RepCmd, error) {
 	s = strings.TrimSpace(s)
 
-	// Extract SysRepMsg
+	// Extract CmdSysRep
 	sysRepEnd := strings.IndexByte(s, ' ')
 	if sysRepEnd == -1 {
 		return nil, fmt.Errorf("invalid format: missing fields")
 	}
 	sysRepMsg := s[:sysRepEnd]
-	if sysRepMsg != commons.SysRepMsg {
-		return nil, fmt.Errorf("invalid format: invalid SysRepMsg")
+	if sysRepMsg != commons.CmdSysRep {
+		return nil, fmt.Errorf("invalid format: invalid CmdSysRep")
 	}
 
 	// Extract PartitionId
@@ -53,7 +53,7 @@ func RepCmdFromString(s string) (*RepCmd, error) {
 		return nil, fmt.Errorf("invalid PartitionId: %v", err)
 	}
 
-	// Extract NodeId
+	// Extract Origin
 	nodeIdStart := partitionEnd + 1
 	nodeIdEnd := strings.IndexByte(s[nodeIdStart:], ' ')
 	if nodeIdEnd == -1 {
@@ -81,7 +81,7 @@ func RepCmdFromString(s string) (*RepCmd, error) {
 		// No arguments, only operation
 		return &RepCmd{
 			PartitionId: partitionId,
-			NodeId:      nodeId,
+			Origin:      nodeId,
 			Timestamp:   timestamp,
 			Operation:   s[operationStart:],
 			Args:        nil,
@@ -95,7 +95,7 @@ func RepCmdFromString(s string) (*RepCmd, error) {
 
 	return &RepCmd{
 		PartitionId: partitionId,
-		NodeId:      nodeId,
+		Origin:      nodeId,
 		Timestamp:   timestamp,
 		Operation:   operation,
 		Args:        args,
@@ -107,7 +107,7 @@ func (rm *RepCmd) Equals(other *RepCmd) bool {
 		return false
 	}
 	return rm.PartitionId == other.PartitionId &&
-		rm.NodeId == other.NodeId &&
+		rm.Origin == other.Origin &&
 		rm.Timestamp == other.Timestamp &&
 		rm.Operation == other.Operation &&
 		reflect.DeepEqual(rm.Args, other.Args)
@@ -132,7 +132,7 @@ func RepCmdFromArgs(args []string) (*RepCmd, error) {
 
 	return &RepCmd{
 		PartitionId: partitionId,
-		NodeId:      args[1],
+		Origin:      args[1],
 		Timestamp:   timestamp,
 		Operation:   args[3],
 		Args:        args[4:],

@@ -46,7 +46,7 @@ func (qs *RepService) ConnectToFollowers() {
 		go func(address string) {
 			conn, err := net.Dial("tcp", address)
 			if err != nil {
-				qs.log.Errorf("Failed to connect to peer %s: %v", address, err)
+				qs.log.Warnf("Failed to connect to peer %s: %v", address, err)
 				return
 			}
 			node := &Node{

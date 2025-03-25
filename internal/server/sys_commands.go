@@ -1,6 +1,8 @@
 package server
 
-import "creek/internal/replication"
+import (
+	"creek/internal/replication"
+)
 
 func handleRepCommand(s *Server, args []string) error {
 	repCmd, err := replication.RepCmdFromArgs(args[1:])

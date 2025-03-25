@@ -27,22 +27,16 @@ type handlerFunc func(sm *core.StateMachine, args []string) (string, error)
 type systemCommandHandlerFunc func(s *Server, args []string) (string, error)
 
 var commandHandlers = map[string]handlerFunc{
-	"SET": func(sm *core.StateMachine, args []string) (string, error) { return "OK", handleSet(sm, args) },
+	commons.CmdDataSet: func(sm *core.StateMachine, args []string) (string, error) { return "OK", handleSet(sm, args) },
 
-	"DELETE": func(sm *core.StateMachine, args []string) (string, error) {
+	commons.CmdDataDel: func(sm *core.StateMachine, args []string) (string, error) {
 		return "OK", handleDelete(sm, args)
 	},
-	"EXPIRE": func(sm *core.StateMachine, args []string) (string, error) {
+	commons.CmdDataEXP: func(sm *core.StateMachine, args []string) (string, error) {
 		return "OK", handleExpire(sm, args)
 	},
-	"TTL": handleTTL,
-	"GET": handleGet,
-	"VERSION": func(sm *core.StateMachine, args []string) (string, error) {
-		return handleVersion()
-	},
-	"PING": func(sm *core.StateMachine, args []string) (string, error) {
-		return "PONG", nil
-	},
+	commons.CmdDataTTL: handleTTL,
+	commons.CmdDataGet: handleGet,
 }
 
 var systemCommandHandlers = map[string]systemCommandHandlerFunc{
@@ -51,8 +45,15 @@ var systemCommandHandlers = map[string]systemCommandHandlerFunc{
 		return "OK", nil
 	},
 
-	commons.SysRepMsg: func(s *Server, args []string) (string, error) {
+	commons.CmdSysRep: func(s *Server, args []string) (string, error) {
 		return "OK", handleRepCommand(s, args)
+	},
+
+	commons.CmdSysVersion: func(s *Server, args []string) (string, error) {
+		return handleVersion()
+	},
+	commons.CmdSysPing: func(s *Server, args []string) (string, error) {
+		return commons.CmdSysPong, nil
 	},
 }
 
