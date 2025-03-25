@@ -9,18 +9,11 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"strconv"
-	"sync"
 	"time"
 )
 
-type Partition struct {
-	lw *replication.LogEntryWriter
-	ds *datastore.DataStore
-	mu sync.Mutex
-}
-
 type StateMachine struct {
-	p *Partition
+	p *replication.Partition
 
 	writeMode commons.WriteConsistencyMode
 	log       *logrus.Logger
@@ -39,9 +32,9 @@ func NewStateMachine(cfg *config.Config) (*StateMachine, error) {
 		return nil, err
 	}
 
-	p := &Partition{
-		lw: writer,
-		ds: datastore.NewDataStore(cfg),
+	p := &replication.Partition{
+		LW: writer,
+		DS: datastore.NewDataStore(cfg),
 	}
 	sm := &StateMachine{
 		p:         p,
@@ -84,9 +77,9 @@ func (s *StateMachine) startGC() {
 }
 
 func (s *StateMachine) cleanExpiredKeys() {
-	s.p.mu.Lock()
-	defer s.p.mu.Unlock()
-	expiredKeys := s.p.ds.GetExpiredKeys()
+	s.p.Mu.Lock()
+	defer s.p.Mu.Unlock()
+	expiredKeys := s.p.DS.GetExpiredKeys()
 	for _, key := range expiredKeys {
 		err := s.deleteWithoutLock(key)
 		if err != nil {
@@ -104,7 +97,7 @@ func (s *StateMachine) startLWFlush() {
 		for {
 			select {
 			case <-ticker.C:
-				err := s.p.lw.Flush()
+				err := s.p.LW.Flush()
 				if err != nil {
 					s.log.Error("Error flushing log entries: ", err)
 					return
@@ -118,36 +111,36 @@ func (s *StateMachine) startLWFlush() {
 }
 
 func (s *StateMachine) Get(key string) (string, error) {
-	return s.p.ds.Get(key), nil
+	return s.p.DS.Get(key), nil
 }
 
 func (s *StateMachine) Set(key, value string, ttl int) error {
-	s.p.mu.Lock()
-	defer s.p.mu.Unlock()
+	s.p.Mu.Lock()
+	defer s.p.Mu.Unlock()
 	entry := replication.LogEntry{
 		Timestamp: time.Now().UnixNano(),
 		Operation: "SET",
 		Args:      []string{key, value, fmt.Sprintf("%d", ttl)},
 	}
 
-	err := s.p.lw.Append(entry)
+	err := s.p.LW.Append(entry)
 	if err != nil {
 		return err
 	}
 	if s.writeMode == commons.StrongConsistency {
-		err := s.p.lw.Flush()
+		err := s.p.LW.Flush()
 		if err != nil {
 			return err
 		}
 	}
 
-	s.p.ds.Set(key, value, ttl)
+	s.p.DS.Set(key, value, ttl)
 	return nil
 }
 
 func (s *StateMachine) Delete(key string) error {
-	s.p.mu.Lock()
-	defer s.p.mu.Unlock()
+	s.p.Mu.Lock()
+	defer s.p.Mu.Unlock()
 	return s.deleteWithoutLock(key)
 }
 
@@ -158,31 +151,31 @@ func (s *StateMachine) deleteWithoutLock(key string) error {
 		Args:      []string{key},
 	}
 
-	err := s.p.lw.Append(entry)
+	err := s.p.LW.Append(entry)
 	if err != nil {
 		return err
 	}
 	if s.writeMode == commons.StrongConsistency {
-		err := s.p.lw.Flush()
+		err := s.p.LW.Flush()
 		if err != nil {
 			return err
 		}
 	}
-	s.p.ds.Delete(key)
+	s.p.DS.Delete(key)
 	return nil
 }
 
 func (s *StateMachine) Stop() error {
 	// Perform any necessary cleanup or shutdown operations
-	s.p.ds.Stop()
+	s.p.DS.Stop()
 	close(s.stopLWFlush)
 	close(s.stopGC)
-	return s.p.lw.Close()
+	return s.p.LW.Close()
 }
 
 func (s *StateMachine) Expire(key string, ttl int) error {
-	s.p.mu.Lock()
-	defer s.p.mu.Unlock()
+	s.p.Mu.Lock()
+	defer s.p.Mu.Unlock()
 
 	entry := replication.LogEntry{
 		Timestamp: time.Now().UnixNano(),
@@ -190,20 +183,20 @@ func (s *StateMachine) Expire(key string, ttl int) error {
 		Args:      []string{key, strconv.Itoa(ttl)},
 	}
 
-	err := s.p.lw.Append(entry)
+	err := s.p.LW.Append(entry)
 	if err != nil {
 		return err
 	}
 	if s.writeMode == commons.StrongConsistency {
-		err := s.p.lw.Flush()
+		err := s.p.LW.Flush()
 		if err != nil {
 			return err
 		}
 	}
-	s.p.ds.Expire(key, ttl)
+	s.p.DS.Expire(key, ttl)
 	return nil
 }
 
 func (s *StateMachine) TTL(key string) (int, error) {
-	return s.p.ds.TTL(key), nil
+	return s.p.DS.TTL(key), nil
 }

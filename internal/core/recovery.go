@@ -12,8 +12,8 @@ import (
 
 func (s *StateMachine) recoverOnStart() error {
 	// partition will be locked until state is completely recovered
-	s.p.mu.Lock()
-	defer s.p.mu.Unlock()
+	s.p.Mu.Lock()
+	defer s.p.Mu.Unlock()
 
 	logFile, err := os.OpenFile(s.conf.DataStoreDirectory+"/commit.log", os.O_RDONLY, 0644)
 
@@ -92,16 +92,16 @@ func (s *StateMachine) processLogEntry(timestamp int64, operation string, args [
 			}
 		}
 		if ttl > 0 && (timestamp+int64(ttl)*int64(time.Second)) <= now {
-			s.p.ds.Delete(key)
+			s.p.DS.Delete(key)
 		} else {
-			s.p.ds.Set(key, value, ttl-(int(now-timestamp)/int(time.Second)))
+			s.p.DS.Set(key, value, ttl-(int(now-timestamp)/int(time.Second)))
 		}
 
 	case "DELETE":
 		if len(args) < 1 {
 			return
 		}
-		s.p.ds.Delete(args[0])
+		s.p.DS.Delete(args[0])
 
 	case "EXPIRE":
 		if len(args) < 2 {
@@ -111,9 +111,9 @@ func (s *StateMachine) processLogEntry(timestamp int64, operation string, args [
 		ttl, err := strconv.Atoi(args[1])
 		if err == nil {
 			if (timestamp + int64(ttl)*int64(time.Second)) <= now {
-				s.p.ds.Delete(key)
+				s.p.DS.Delete(key)
 			} else {
-				s.p.ds.Expire(key, ttl-(int(now-timestamp)/int(time.Second)))
+				s.p.DS.Expire(key, ttl-(int(now-timestamp)/int(time.Second)))
 			}
 		}
 	}

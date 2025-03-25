@@ -16,7 +16,6 @@ type RepCmd struct {
 }
 
 func (rm *RepCmd) String() string {
-	// fix this
 	return fmt.Sprintf(
 		"%d %s %d %s %s\n",
 		rm.PartitionId,
