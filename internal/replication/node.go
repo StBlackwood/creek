@@ -40,5 +40,5 @@ func (n *Node) SendRepCmd(cmd *RepCmd) error {
 		return fmt.Errorf("node is not connected")
 	}
 
-	return n.SendRepCmd(cmd)
+	return n.WriteData(cmd.String())
 }
