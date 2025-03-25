@@ -4,12 +4,12 @@ import (
 	"creek/internal/config"
 	"creek/internal/datastore"
 	"creek/internal/logger"
-	"creek/internal/replication"
+	"creek/internal/partition"
 	"github.com/sirupsen/logrus"
 )
 
 type StateMachine struct {
-	p *replication.Partition
+	p *partition.Partition
 
 	log  *logrus.Logger
 	conf *config.Config
@@ -18,7 +18,7 @@ type StateMachine struct {
 func NewStateMachine(cfg *config.Config) (*StateMachine, error) {
 
 	store := datastore.NewDataStore(cfg)
-	p, _ := replication.NewPartition(0, cfg, store)
+	p, _ := partition.NewPartition(0, cfg, store)
 
 	sm := &StateMachine{
 		p:    p,
@@ -37,12 +37,12 @@ func (s *StateMachine) Stop() error {
 	return s.p.StopPartition()
 }
 
-func (s *StateMachine) AttachRepCmdWriteHandlerToPartitions(handler replication.PartitionRepCmdWriteHandler) {
+func (s *StateMachine) AttachRepCmdWriteHandlerToPartitions(handler partition.RepCmdWriteHandler) {
 	// loop through all partitions
 	s.p.AttachRepCmdWriteHandler(handler)
 }
 
-func (s *StateMachine) getPartition(key string) (*replication.Partition, error) {
+func (s *StateMachine) getPartition(key string) (*partition.Partition, error) {
 	return s.p, nil
 }
 

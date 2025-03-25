@@ -1,10 +1,11 @@
-package replication
+package partition
 
 import (
 	"creek/internal/commons"
 	"creek/internal/config"
 	"creek/internal/datastore"
 	"creek/internal/logger"
+	"creek/internal/replication"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"strconv"
@@ -12,7 +13,7 @@ import (
 	"time"
 )
 
-type PartitionRepCmdWriteHandler func(cmd *RepCmd) error
+type RepCmdWriteHandler func(cmd *replication.RepCmd) error
 
 type Partition struct {
 	lw *LogEntryWriter
@@ -25,12 +26,12 @@ type Partition struct {
 
 	log *logrus.Logger
 
-	writeChan   chan *RepCmd
+	writeChan   chan *replication.RepCmd
 	stopLWFlush chan struct{}
 	stopGC      chan struct{}
 }
 
-func (p *Partition) SendWriteCommand(cmd *RepCmd) {
+func (p *Partition) SendWriteCommand(cmd *replication.RepCmd) {
 	cmd.PartitionId = p.Id
 
 	select {
@@ -56,7 +57,7 @@ func NewPartition(id int, cfg *config.Config, ds *datastore.DataStore) (*Partiti
 		Id:            id,
 		partitionMode: cfg.ServerMode,
 		log:           logger.CreateLogger(cfg.LogLevel),
-		writeChan:     make(chan *RepCmd, 100), // Buffered channel for async writes
+		writeChan:     make(chan *replication.RepCmd, 100), // Buffered channel for async writes
 		writeMode:     cfg.WriteConsistencyMode,
 		stopLWFlush:   make(chan struct{}),
 		stopGC:        make(chan struct{}),
@@ -75,12 +76,12 @@ func (p *Partition) Start() error {
 	return nil
 }
 
-func (p *Partition) AttachRepCmdWriteHandler(handler PartitionRepCmdWriteHandler) {
+func (p *Partition) AttachRepCmdWriteHandler(handler RepCmdWriteHandler) {
 	go p.listenForWrites(handler)
 }
 
 // listenForWrites listens for commands and delegates handling to the provided function.
-func (p *Partition) listenForWrites(handler PartitionRepCmdWriteHandler) {
+func (p *Partition) listenForWrites(handler RepCmdWriteHandler) {
 	for cmd := range p.writeChan {
 		err := handler(cmd)
 		if err != nil {
@@ -121,7 +122,7 @@ func (p *Partition) Set(key, value string, ttl int) error {
 
 	p.ds.Set(key, value, ttl)
 	p.SendWriteCommand(
-		&RepCmd{
+		&replication.RepCmd{
 			Origin:      "owner",
 			PartitionId: 0,
 			Timestamp:   time.Now().UnixNano(),
