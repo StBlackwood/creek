@@ -41,7 +41,7 @@ CREEK_CONF_FILE="node1.conf" ./creek
 CREEK_CONF_FILE="node2.conf" ./creek
 ```
 
-### **4️⃣ Connect via Pythong Cmdline Client**
+### **4️⃣ Connect via Python Cmdline Client**
 ```sh
 python client/client_cmdline.py connect localhost:7690
 ```
@@ -95,7 +95,7 @@ export CREEK_CONF_FILE="config/dev.conf"
 ✔ **Basic Key-Value Store**  
 ✔ **Garbage Collection for Expired Keys**  
 ✔ **Persistent Storage through commit logs**  
-✔ **Crash Recovery**
+✔ **Crash Recovery**  
 ✔ **Replication Across Nodes**  
 🔜 **Configurable Consistency Levels**  
 🔜 **Basic Fault Tolerance**  
