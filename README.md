@@ -37,13 +37,13 @@ go build -o creek cmd/server/main.go
 Each node should have a unique **port** and a list of **peer nodes** for replication.
 
 ```sh
-PEER_NODES="localhost:8081" ./creek -port 8080
-PEER_NODES="localhost:8080" ./creek -port 8081
+CREEK_CONF_FILE="node1.conf" ./creek
+CREEK_CONF_FILE="node2.conf" ./creek
 ```
 
-### **4️⃣ Connect via Netcat**
+### **4️⃣ Connect via Pythong Cmdline Client**
 ```sh
-nc localhost 8080
+python client/client_cmdline.py connect localhost:7690
 ```
 - **Store a Key:** `SET user Alice`
 - **Retrieve a Key:** `GET user`
@@ -93,16 +93,16 @@ export CREEK_CONF_FILE="config/dev.conf"
 
 ## **📌 Roadmap**
 ✔ **Basic Key-Value Store**  
-✔ **Replication Across Nodes**  
 ✔ **Garbage Collection for Expired Keys**  
 ✔ **Persistent Storage through commit logs**  
 ✔ **Crash Recovery**
+✔ **Replication Across Nodes**  
 🔜 **Configurable Consistency Levels**  
 🔜 **Basic Fault Tolerance**  
 🔜 **Automatic Data Partitioning**  
 🔜 **Distributed Transactions**
 
-[Next Roadmap tasks are outlined in a trello board here](`https://trello.com/b/p2PbyoZV`)
+[Next Roadmap tasks are outlined in a trello board here](https://trello.com/b/p2PbyoZV)
 
 ---
 

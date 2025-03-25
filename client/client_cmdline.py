@@ -1,5 +1,6 @@
-﻿import sys
-import socket
+﻿import socket
+import sys
+
 
 def main():
     if len(sys.argv) != 3 or sys.argv[1] != "connect":
@@ -26,9 +27,6 @@ def main():
             # Wait for the response **before taking new input**
             try:
                 response = sock.recv(1024).decode().strip()
-                if not response:
-                    print("\n[Server closed connection]")
-                    break  # Exit the loop if server disconnects
                 print(f"{response}")
 
             except (socket.error, ConnectionResetError, BrokenPipeError):
@@ -41,7 +39,7 @@ def main():
                 print("Closing connection...")
                 sock.close()
                 break
-            message += "\n" # add delimiter at the end
+            message += "\n"  # add delimiter at the end
             sock.sendall(message.encode())  # Send message to the server
 
     except KeyboardInterrupt:
@@ -52,6 +50,6 @@ def main():
         sock.close()
         sys.exit(1)
 
+
 if __name__ == "__main__":
     main()
-

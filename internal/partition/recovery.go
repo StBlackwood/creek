@@ -1,7 +1,8 @@
-package core
+package partition
 
 import (
 	"bufio"
+	"creek/internal/commons"
 	"fmt"
 	"io"
 	"os"
@@ -10,12 +11,12 @@ import (
 	"time"
 )
 
-func (s *StateMachine) recoverOnStart() error {
+func (p *Partition) recoverOnStart() error {
 	// partition will be locked until state is completely recovered
-	s.p.mu.Lock()
-	defer s.p.mu.Unlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
-	logFile, err := os.OpenFile(s.conf.DataStoreDirectory+"/commit.log", os.O_RDONLY, 0644)
+	logFile, err := os.OpenFile(p.lw.logFilePath, os.O_RDONLY, 0644)
 
 	if err != nil {
 		return fmt.Errorf("failed to open commit log: %w", err)
@@ -23,7 +24,7 @@ func (s *StateMachine) recoverOnStart() error {
 	defer func(logFile *os.File) {
 		err := logFile.Close()
 		if err != nil {
-			s.log.Warnf("Error closing commit log in recovery: %v", err)
+			p.log.Warnf("Error closing commit log in recovery: %v", err)
 		}
 	}(logFile)
 
@@ -42,20 +43,20 @@ func (s *StateMachine) recoverOnStart() error {
 
 		batch = append(batch, strings.TrimSpace(line))
 		if len(batch) >= batchSize {
-			s.processBatch(&batch)
+			p.processBatch(&batch)
 			batch = batch[:0] // Clear batch
 		}
 	}
 
 	// Process any remaining entries
 	if len(batch) > 0 {
-		s.processBatch(&batch)
+		p.processBatch(&batch)
 	}
 
 	return nil
 }
 
-func (s *StateMachine) processBatch(entries *[]string) {
+func (p *Partition) processBatch(entries *[]string) {
 	now := time.Now().UnixNano()
 
 	for _, line := range *entries {
@@ -66,20 +67,20 @@ func (s *StateMachine) processBatch(entries *[]string) {
 
 		timestamp, err := strconv.ParseInt(parts[0], 10, 64)
 		if err != nil {
-			s.log.Warnf("Skipping malformed log entry: %s", line)
+			p.log.Warnf("Skipping malformed log entry: %s", line)
 			continue
 		}
 
 		op := parts[1]
 		args := parts[2:]
 
-		s.processLogEntry(timestamp, op, args, now)
+		p.processLogEntry(timestamp, op, args, now)
 	}
 }
 
-func (s *StateMachine) processLogEntry(timestamp int64, operation string, args []string, now int64) {
+func (p *Partition) processLogEntry(timestamp int64, operation string, args []string, now int64) {
 	switch operation {
-	case "SET":
+	case commons.CmdDataSet:
 		if len(args) < 2 {
 			return
 		}
@@ -92,18 +93,18 @@ func (s *StateMachine) processLogEntry(timestamp int64, operation string, args [
 			}
 		}
 		if ttl > 0 && (timestamp+int64(ttl)*int64(time.Second)) <= now {
-			s.p.ds.Delete(key)
+			p.ds.Delete(key)
 		} else {
-			s.p.ds.Set(key, value, ttl-(int(now-timestamp)/int(time.Second)))
+			p.ds.Set(key, value, ttl-(int(now-timestamp)/int(time.Second)))
 		}
 
-	case "DELETE":
+	case commons.CmdDataDel:
 		if len(args) < 1 {
 			return
 		}
-		s.p.ds.Delete(args[0])
+		p.ds.Delete(args[0])
 
-	case "EXPIRE":
+	case commons.CmdDataEXP:
 		if len(args) < 2 {
 			return
 		}
@@ -111,9 +112,9 @@ func (s *StateMachine) processLogEntry(timestamp int64, operation string, args [
 		ttl, err := strconv.Atoi(args[1])
 		if err == nil {
 			if (timestamp + int64(ttl)*int64(time.Second)) <= now {
-				s.p.ds.Delete(key)
+				p.ds.Delete(key)
 			} else {
-				s.p.ds.Expire(key, ttl-(int(now-timestamp)/int(time.Second)))
+				p.ds.Expire(key, ttl-(int(now-timestamp)/int(time.Second)))
 			}
 		}
 	}

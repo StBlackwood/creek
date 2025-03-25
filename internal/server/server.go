@@ -5,8 +5,8 @@ import (
 	"creek/internal/commons"
 	"creek/internal/config"
 	"creek/internal/core"
-	"creek/internal/handler"
 	"creek/internal/logger"
+	"creek/internal/replication"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"net"
@@ -22,17 +22,19 @@ type Server struct {
 	done     chan struct{}
 	Conf     *config.Config
 	sm       *core.StateMachine
+	rs       *replication.RepService
 	log      *logrus.Logger
 }
 
 // New creates a new Server instance
 func New(cfg *config.Config) *Server {
 
-	stateMachine, err := core.NewStateMachine(cfg)
+	replicationService, err := replication.NewRepService(cfg)
 	if err != nil {
 		panic(err)
 	}
-	err = stateMachine.Start()
+
+	stateMachine, err := core.NewStateMachine(replicationService.GetSelfNodeId(), cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -43,14 +45,25 @@ func New(cfg *config.Config) *Server {
 		done:    make(chan struct{}),
 		Conf:    cfg,
 		sm:      stateMachine,
+		rs:      replicationService,
 		log:     logger.CreateLogger(cfg.LogLevel),
 	}
 }
 
 // Start begins listening for TCP connections
 func (s *Server) Start() {
-
 	var err error
+
+	err = s.sm.Start()
+	if err != nil {
+		panic(err)
+	}
+
+	s.rs.ConnectToFollowers()
+	s.sm.AttachRepCmdWriteHandlerToPartitions(func(cmd *replication.RepCmd) error {
+		return s.rs.HandleRepCmdWrite(cmd)
+	})
+
 	s.listener, err = net.Listen("tcp", s.address)
 	if err != nil {
 		s.log.Fatalf("Error starting server: %v", err)
@@ -93,6 +106,11 @@ func (s *Server) Stop() {
 		s.log.Errorf("Error stopping state machine: %v", err)
 	} // Stop datastore and GC
 
+	err = s.rs.Stop()
+	if err != nil {
+		s.log.Errorf("Error stopping replication service: %v", err)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for conn := range s.clients {
@@ -133,7 +151,7 @@ func (s *Server) handleClient(conn net.Conn) {
 		s.log.Trace("Received from ", conn.RemoteAddr(), ": ", message)
 
 		// Process and respond to message
-		response, err := handler.HandleMessage(s.sm, message)
+		response, err := handleMessage(s, message)
 		if err != nil {
 			s.log.Warnf("Error handling message: %v", err)
 			s.SendMsg(conn, err.Error())

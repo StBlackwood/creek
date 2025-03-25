@@ -1,10 +1,13 @@
 package test
 
 import (
+	"bufio"
 	"creek/internal/commons"
 	"creek/internal/config"
+	"net"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 var SimpleServerConfig = config.Config{
@@ -14,7 +17,7 @@ var SimpleServerConfig = config.Config{
 	WriteConsistencyMode: commons.EventualConsistency,
 }
 
-func CleanupAfterTest(conf *config.Config) {
+func cleanupAfterTest(conf *config.Config) {
 	dirPath := conf.DataStoreDirectory
 
 	files, err := os.ReadDir(dirPath)
@@ -31,4 +34,19 @@ func CleanupAfterTest(conf *config.Config) {
 			panic(err) // Adjust error handling as needed
 		}
 	}
+}
+
+func sendRequest(conn net.Conn, request string) (string, error) {
+	_, err := conn.Write([]byte(request + "\n"))
+	if err != nil {
+		return "", err
+	}
+
+	reader := bufio.NewReader(conn)
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(response), nil
 }

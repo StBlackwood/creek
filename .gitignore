@@ -30,4 +30,4 @@ go.work.sum
 target
 
 data_dir
-config/dev.conf
+config/dev*.conf
