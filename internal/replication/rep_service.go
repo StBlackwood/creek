@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-type QuorumService struct {
+type RepService struct {
 	Nodes map[string]*Node
 	Conf  *config.Config
 	mu    sync.Mutex
@@ -17,7 +17,7 @@ type QuorumService struct {
 }
 
 // GetNodes returns all nodes right now, once data partition is introduced this result will be based on partitionId
-func (qs *QuorumService) GetNodes(partitionId int) []*Node {
+func (qs *RepService) GetNodes(partitionId int) []*Node {
 	qs.mu.Lock()
 	defer qs.mu.Unlock()
 
@@ -27,8 +27,8 @@ func (qs *QuorumService) GetNodes(partitionId int) []*Node {
 	}
 	return nodes
 }
-func NewQuorumService(cfg *config.Config) *QuorumService {
-	qs := &QuorumService{
+func NewRepService(cfg *config.Config) *RepService {
+	qs := &RepService{
 		Nodes: make(map[string]*Node),
 		Conf:  cfg,
 		log:   logger.CreateLogger(cfg.LogLevel),
@@ -36,7 +36,7 @@ func NewQuorumService(cfg *config.Config) *QuorumService {
 	return qs
 }
 
-func (qs *QuorumService) ConnectToFollowers() {
+func (qs *RepService) ConnectToFollowers() {
 	if qs.Conf.ServerMode != commons.Leader {
 		return
 	}
@@ -59,7 +59,7 @@ func (qs *QuorumService) ConnectToFollowers() {
 	}
 }
 
-func (qs *QuorumService) addNode(node *Node) {
+func (qs *RepService) addNode(node *Node) {
 	qs.mu.Lock()
 	defer qs.mu.Unlock()
 	qs.Nodes[node.Id] = node
