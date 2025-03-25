@@ -10,11 +10,42 @@ import (
 	"strings"
 )
 
+var dataDir = "../data_dir"
+var testDataDir = dataDir + "/test"
+
 var SimpleServerConfig = config.Config{
-	ServerAddress:        "localhost:9090",
-	DataStoreDirectory:   "../data_dir/test",
+	ServerAddress:        "localhost:7690",
+	DataStoreDirectory:   testDataDir,
 	LogLevel:             "info",
 	WriteConsistencyMode: commons.EventualConsistency,
+}
+
+var FollowerServerConfig = config.Config{
+	ServerAddress:        "localhost:7692",
+	DataStoreDirectory:   testDataDir + "/follower",
+	LogLevel:             "info",
+	WriteConsistencyMode: commons.EventualConsistency,
+	ReplicationMode:      commons.ReadOnlyReplication,
+	ServerMode:           commons.Follower,
+}
+
+var LeaderServerConfig = config.Config{
+	ServerAddress:        "localhost:7691",
+	DataStoreDirectory:   testDataDir + "/leader",
+	LogLevel:             "info",
+	PeerNodes:            []string{FollowerServerConfig.ServerAddress},
+	WriteConsistencyMode: commons.EventualConsistency,
+	ReplicationMode:      commons.ReadAndWriteReplication,
+	ServerMode:           commons.Leader,
+}
+
+func setupTest(conf *config.Config) {
+	if _, err := os.Stat(conf.DataStoreDirectory); os.IsNotExist(err) {
+		err := os.MkdirAll(conf.DataStoreDirectory, os.ModePerm)
+		if err != nil {
+			panic(err) // Adjust error handling as needed
+		}
+	}
 }
 
 func cleanupAfterTest(conf *config.Config) {

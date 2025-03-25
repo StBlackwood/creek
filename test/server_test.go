@@ -8,6 +8,7 @@ import (
 )
 
 func TestServer_StartStop(t *testing.T) {
+	setupTest(&SimpleServerConfig)
 	srv := server.New(&SimpleServerConfig)
 	defer cleanupAfterTest(&SimpleServerConfig)
 	go srv.Start()
