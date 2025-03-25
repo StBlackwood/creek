@@ -5,29 +5,13 @@ import (
 	"creek/internal/commons"
 	"creek/internal/server"
 	"net"
-	"strings"
 	"testing"
 	"time"
 )
 
-func sendRequest(conn net.Conn, request string) (string, error) {
-	_, err := conn.Write([]byte(request + "\n"))
-	if err != nil {
-		return "", err
-	}
-
-	reader := bufio.NewReader(conn)
-	response, err := reader.ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-
-	return strings.TrimSpace(response), nil
-}
-
 func TestServer_Commands(t *testing.T) {
 	srv := server.New(&SimpleServerConfig)
-	defer CleanupAfterTest(&SimpleServerConfig)
+	defer cleanupAfterTest(&SimpleServerConfig)
 	go srv.Start()
 	defer srv.Stop()
 	time.Sleep(1 * time.Second)

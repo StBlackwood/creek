@@ -5,7 +5,6 @@ import (
 	"creek/internal/commons"
 	"creek/internal/config"
 	"creek/internal/core"
-	"creek/internal/handler"
 	"creek/internal/logger"
 	"fmt"
 	"github.com/sirupsen/logrus"
@@ -133,7 +132,7 @@ func (s *Server) handleClient(conn net.Conn) {
 		s.log.Trace("Received from ", conn.RemoteAddr(), ": ", message)
 
 		// Process and respond to message
-		response, err := handler.HandleMessage(s.sm, message)
+		response, err := handleMessage(s, message)
 		if err != nil {
 			s.log.Warnf("Error handling message: %v", err)
 			s.SendMsg(conn, err.Error())

@@ -20,6 +20,8 @@ type Config struct {
 	PeerNodes            []string
 	DataStoreDirectory   string
 	WriteConsistencyMode commons.WriteConsistencyMode
+	ReplicationMode      commons.ReplicaMode
+	ServerMode           commons.PartitionMode // For now, in future this config will be removed once data partition is introduced
 }
 
 // LoadConfig initializes the configuration from a file
@@ -61,12 +63,24 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("error reading config file %s: %w", configFile, err)
 	}
 
+	var nodes []string
+	if val, exists := parsedConfig["peer_nodes"]; exists {
+		nodes = strings.Split(val, ",")
+	}
+
 	conf := Config{
 		ServerAddress:      parsedConfig["server_address"],
 		LogLevel:           parsedConfig["log_level"],
 		DataStoreDirectory: parsedConfig["data_store_directory"],
+		PeerNodes:          nodes,
 		WriteConsistencyMode: commons.GetConsistencyModeFromString(
 			parsedConfig["write_consistency_mode"],
+		),
+		ReplicationMode: commons.GetReplicaModeFromString(
+			parsedConfig["replication_mode"],
+		),
+		ServerMode: commons.GetPartitionModeFromString(
+			parsedConfig["server_mode"],
 		),
 	}
 	err = conf.populateConfig(parsedConfig)

@@ -10,7 +10,7 @@ import (
 )
 
 func TestServer_Recovery(t *testing.T) {
-	defer CleanupAfterTest(&SimpleServerConfig)
+	defer cleanupAfterTest(&SimpleServerConfig)
 	srv := server.New(&SimpleServerConfig)
 	go srv.Start()
 	time.Sleep(1 * time.Second) // Allow server to start
@@ -67,7 +67,7 @@ func TestServer_Recovery(t *testing.T) {
 }
 
 func TestServer_RecoveryWithTTL(t *testing.T) {
-	defer CleanupAfterTest(&SimpleServerConfig)
+	defer cleanupAfterTest(&SimpleServerConfig)
 	srv := server.New(&SimpleServerConfig)
 	go srv.Start()
 	time.Sleep(1 * time.Second) // Allow server to start
