@@ -87,7 +87,6 @@ func (ds *DataStore) Get(key string) string {
 	}
 	// Check if key has expired
 	if entry.Expiration > 0 && entry.Expiration <= time.Now().Unix() {
-		delete(ds.data, key)
 		return ""
 	}
 	return entry.Value
@@ -135,7 +134,6 @@ func (ds *DataStore) TTL(key string) int {
 	}
 	remaining := entry.Expiration - time.Now().Unix()
 	if remaining <= 0 {
-		delete(ds.data, key)
 		return -2
 	}
 	return int(remaining)

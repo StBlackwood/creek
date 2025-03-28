@@ -71,6 +71,24 @@ export CREEK_CONF_FILE="config/dev.conf"
 
 ---
 
+## **🛠️ Running Tests**
+To ensure the Creek server works correctly, you can run the test suite.
+
+### **Run Tests with Make**
+```sh
+make test
+```
+
+### **Run Tests with Go**
+If you don’t have `make`, you can manually run tests using:
+```sh
+go test ./test
+```
+
+This will execute all test cases inside the `test` package.
+
+---
+
 ## **🛠️ Architecture**
 ### **1️⃣ Data Storage**
 - Uses an **in-memory key-value store** with optional TTL.
