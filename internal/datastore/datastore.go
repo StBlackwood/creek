@@ -32,20 +32,6 @@ func NewDataStore(config *config.Config) *DataStore {
 	return ds
 }
 
-// CleanExpiredKeys removes expired keys from the datastore
-func (ds *DataStore) CleanExpiredKeys() {
-	ds.mu.Lock()
-	defer ds.mu.Unlock()
-
-	now := time.Now().Unix()
-	for key, entry := range ds.data {
-		if entry.Expiration > 0 && entry.Expiration <= now {
-			delete(ds.data, key)
-			ds.log.Trace("GC: Deleted expired key:", key)
-		}
-	}
-}
-
 // GetExpiredKeys gets expired keys as array form the datastore
 func (ds *DataStore) GetExpiredKeys() []string {
 	ds.mu.Lock()
@@ -87,16 +73,6 @@ func (ds *DataStore) Get(key string) string {
 	}
 	// Check if key has expired
 	if entry.Expiration > 0 && entry.Expiration <= time.Now().Unix() {
-		return ""
-	}
-	return entry.Value
-}
-
-func (ds *DataStore) GetWithoutTTL(key string) string {
-	ds.mu.Lock()
-	defer ds.mu.Unlock()
-	entry, exists := ds.data[key]
-	if !exists {
 		return ""
 	}
 	return entry.Value

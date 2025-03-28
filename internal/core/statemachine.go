@@ -1,18 +1,21 @@
 package core
 
 import (
+	"creek/internal/commons"
 	"creek/internal/config"
 	"creek/internal/datastore"
 	"creek/internal/logger"
 	"creek/internal/partition"
 	"creek/internal/replication"
+	"fmt"
 	"github.com/sirupsen/logrus"
 )
 
 type StateMachine struct {
 	p *partition.Partition
 
-	NodeId string
+	NodeId    string
+	WriteMode commons.ReplicaMode
 
 	log  *logrus.Logger
 	conf *config.Config
@@ -21,7 +24,10 @@ type StateMachine struct {
 func NewStateMachine(NodeId string, cfg *config.Config) (*StateMachine, error) {
 
 	store := datastore.NewDataStore(cfg)
-	p, _ := partition.NewPartition(0, NodeId, cfg, store)
+	p, err := partition.NewPartition(0, NodeId, cfg, store)
+	if err != nil {
+		panic(err)
+	}
 
 	sm := &StateMachine{
 		p:      p,
@@ -67,6 +73,9 @@ func (s *StateMachine) Set(key, value string, ttl int) error {
 	if err != nil {
 		return err
 	}
+	if s.WriteMode == commons.ReadOnlyReplication && p.PartitionMode == commons.Follower {
+		return fmt.Errorf("write mode is read-only for the follower partition")
+	}
 	return p.Set(key, value, ttl)
 }
 
@@ -75,6 +84,9 @@ func (s *StateMachine) Delete(key string) error {
 	if err != nil {
 		return err
 	}
+	if s.WriteMode == commons.ReadOnlyReplication && p.PartitionMode == commons.Follower {
+		return fmt.Errorf("write mode is read-only for the follower partition")
+	}
 	return p.Delete(key)
 }
 
@@ -82,6 +94,9 @@ func (s *StateMachine) Expire(key string, ttl int) error {
 	p, err := s.getPartitionFromKey(key)
 	if err != nil {
 		return err
+	}
+	if s.WriteMode == commons.ReadOnlyReplication && p.PartitionMode == commons.Follower {
+		return fmt.Errorf("write mode is read-only for the follower partition")
 	}
 	return p.Expire(key, ttl)
 }

@@ -23,8 +23,8 @@ type Partition struct {
 	ds *datastore.DataStore
 	mu sync.Mutex
 
-	partitionMode commons.PartitionMode
-	writeMode     commons.WriteConsistencyMode
+	PartitionMode commons.PartitionMode
+	WriteMode     commons.WriteConsistencyMode
 
 	log *logrus.Logger
 
@@ -58,10 +58,10 @@ func NewPartition(id int, nodeId string, cfg *config.Config, ds *datastore.DataS
 		SelfNodeId:    nodeId,
 		lw:            writer, // Assume LogEntryWriter is initialized elsewhere
 		ds:            ds,
-		partitionMode: cfg.ServerMode,
+		PartitionMode: cfg.ServerMode,
 		log:           logger.CreateLogger(cfg.LogLevel),
 		writeChan:     make(chan *replication.RepCmd, 100), // Buffered channel for async writes
-		writeMode:     cfg.WriteConsistencyMode,
+		WriteMode:     cfg.WriteConsistencyMode,
 		stopLWFlush:   make(chan struct{}),
 		stopGC:        make(chan struct{}),
 	}
@@ -75,7 +75,7 @@ func (p *Partition) Start() error {
 		return err
 	}
 	p.startLWFlush()
-	if p.partitionMode == commons.Leader {
+	if p.PartitionMode == commons.Leader {
 		p.startGC() // Start garbage collection only in leader mode. followers will receive expire deletes from leader
 	}
 	return nil
@@ -169,7 +169,7 @@ func (p *Partition) Set(key, value string, ttl int) error {
 	if err != nil {
 		return err
 	}
-	if p.writeMode == commons.StrongConsistency {
+	if p.WriteMode == commons.StrongConsistency {
 		err := p.lw.Flush()
 		if err != nil {
 			return err
@@ -190,10 +190,6 @@ func (p *Partition) Set(key, value string, ttl int) error {
 }
 
 func (p *Partition) Get(key string) (string, error) {
-	if p.partitionMode == commons.Follower {
-		return p.ds.GetWithoutTTL(key), nil
-	}
-	//
 	return p.ds.Get(key), nil
 }
 
@@ -214,7 +210,7 @@ func (p *Partition) deleteWithoutLock(key string) error {
 	if err != nil {
 		return err
 	}
-	if p.writeMode == commons.StrongConsistency {
+	if p.WriteMode == commons.StrongConsistency {
 		err := p.lw.Flush()
 		if err != nil {
 			return err
@@ -247,7 +243,7 @@ func (p *Partition) Expire(key string, ttl int) error {
 	if err != nil {
 		return err
 	}
-	if p.writeMode == commons.StrongConsistency {
+	if p.WriteMode == commons.StrongConsistency {
 		err := p.lw.Flush()
 		if err != nil {
 			return err
@@ -271,7 +267,7 @@ func (p *Partition) TTL(key string) (int, error) {
 }
 
 func (p *Partition) ProcessRepCmd(cmd *replication.RepCmd) error {
-	if p.partitionMode == commons.Leader {
+	if p.PartitionMode == commons.Leader {
 		return fmt.Errorf("partition is not in follower mode to accept replication commands")
 	}
 
