@@ -115,8 +115,16 @@ func (conf *Config) validateConfig() error {
 	if conf.ServerAddress == "" {
 		return errors.New("missing required config: server_address")
 	}
+	if conf.ReplicationMode == commons.ReadAndWriteReplication && conf.ServerMode == commons.Follower {
+		return errors.New("followers cant accept writes right now")
+	}
+
 	if conf.DataStoreDirectory == "" {
 		return errors.New("missing required config: data_store_directory")
+	}
+	info, err := os.Stat(conf.DataStoreDirectory)
+	if err != nil || !info.IsDir() {
+		return fmt.Errorf("invalid data_store_directory: %s", conf.DataStoreDirectory)
 	}
 	return nil
 }
