@@ -41,7 +41,7 @@ CREEK_CONF_FILE="node1.conf" ./creek
 CREEK_CONF_FILE="node2.conf" ./creek
 ```
 
-### **4️⃣ Connect via Pythong Cmdline Client**
+### **4️⃣ Connect via Python Cmdline Client**
 ```sh
 python client/client_cmdline.py connect localhost:7690
 ```
@@ -71,6 +71,24 @@ export CREEK_CONF_FILE="config/dev.conf"
 
 ---
 
+## **🛠️ Running Tests**
+To ensure the Creek server works correctly, you can run the test suite.
+
+### **Run Tests with Make**
+```sh
+make test
+```
+
+### **Run Tests with Go**
+If you don’t have `make`, you can manually run tests using:
+```sh
+go test ./test
+```
+
+This will execute all test cases inside the `test` package.
+
+---
+
 ## **🛠️ Architecture**
 ### **1️⃣ Data Storage**
 - Uses an **in-memory key-value store** with optional TTL.
@@ -95,7 +113,7 @@ export CREEK_CONF_FILE="config/dev.conf"
 ✔ **Basic Key-Value Store**  
 ✔ **Garbage Collection for Expired Keys**  
 ✔ **Persistent Storage through commit logs**  
-✔ **Crash Recovery**
+✔ **Crash Recovery**  
 ✔ **Replication Across Nodes**  
 🔜 **Configurable Consistency Levels**  
 🔜 **Basic Fault Tolerance**  
