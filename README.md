@@ -1,6 +1,6 @@
 
 <p>
-  <img src="https://github.com/StBlackwood/creek/actions/workflows/go-ci.yml/badge.svg" alt="Build Status" width="180">
+  <img src="https://github.com/StBlackwood/creek/actions/workflows/creekdb-go-build-ci.yml/badge.svg" alt="Build Status" width="180">
 </p>
 
 ## **CreekDB - A Distributed Key-Value Store**
