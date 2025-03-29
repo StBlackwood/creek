@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -107,7 +108,24 @@ func (conf *Config) populateConfig(parsedConfig map[string]string) error {
 		conf.PeerNodes = strings.Split(peers, ",")
 	}
 
+	conf.fillUpDefaults()
 	return conf.validateConfig()
+}
+
+func (conf *Config) fillUpDefaults() {
+	if conf.ServerAddress == "" {
+		conf.ServerAddress = "localhost:" + strconv.Itoa(commons.DefaultPort)
+	}
+
+	if conf.DataStoreDirectory == "" {
+		conf.DataStoreDirectory = "data_dir"
+		if !isDirPathExists(conf.DataStoreDirectory) {
+			err := os.MkdirAll(conf.DataStoreDirectory, os.ModePerm)
+			if err != nil {
+				panic(err) // Adjust error handling as needed
+			}
+		}
+	}
 }
 
 // validateConfig checks required configurations and ensures values are valid
@@ -122,11 +140,19 @@ func (conf *Config) validateConfig() error {
 	if conf.DataStoreDirectory == "" {
 		return errors.New("missing required config: data_store_directory")
 	}
-	info, err := os.Stat(conf.DataStoreDirectory)
-	if err != nil || !info.IsDir() {
+	isDirExists := isDirPathExists(conf.DataStoreDirectory)
+	if !isDirExists {
 		return fmt.Errorf("invalid data_store_directory: %s", conf.DataStoreDirectory)
 	}
 	return nil
+}
+
+func isDirPathExists(dir string) bool {
+	info, err := os.Stat(dir)
+	if err != nil || !info.IsDir() {
+		return false
+	}
+	return true
 }
 
 // getEnv fetches environment variables with a default fallback
