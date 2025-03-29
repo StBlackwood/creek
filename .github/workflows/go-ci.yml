@@ -1,51 +1,28 @@
-name: Go CI
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: Go BUILD CI
 
 on:
   push:
-    branches:
-      - master
+    branches: [ "master" ]
   pull_request:
-    branches:
-      - master
+    branches: [ "master" ]
 
 jobs:
-  build-test-coverage:
+
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.24'
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.24'
 
-      - name: Build
-        run: go build -v ./cmd/server/main.go
+    - name: Build
+      run: go build -v ./cmd/server/main.go
 
-      - name: Run Tests with Coverage
-        run: go test -v -coverprofile=coverage.out ./test
-
-      - name: Upload Coverage Report as Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage.out
-
-      - name: Generate Coverage Percentage
-        run: |
-          echo "Generating coverage percentage..."
-          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%')
-          echo "Coverage: ${COVERAGE}%"
-          echo "${COVERAGE}" > coverage.txt
-
-      - name: Convert Coverage to Badge (SVG)
-        run: |
-          echo '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="20"><rect rx="3" width="120" height="20" fill="#555"/><rect rx="3" x="65" width="55" height="20" fill="#4c1"/><path d="M65 0h4v20h-4z" fill="#555"/><text x="5" y="14" fill="#fff" font-family="Verdana" font-size="11">Coverage</text><text x="70" y="14" fill="#fff" font-family="Verdana" font-size="11">'$COVERAGE'%</text></svg>' > coverage.svg
-
-      - name: Upload Coverage Badge as Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-badge
-          path: coverage.svg
+    - name: Test
+      run: go test -v ./test
