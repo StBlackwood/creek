@@ -1,7 +1,7 @@
-## **Creek - A Distributed Key-Value Store**
+## **CreekDB - A Distributed Key-Value Store**
 ![Creek Logo](assets/creek_logo_med.png)
 
-🚀 **Creek** is a high-performance, distributed key-value store designed for scalability and fault tolerance. It supports **replication, expiration (TTL), and eventual consistency** while maintaining a simple TCP-based interface.
+🚀 **CreekDB** is a high-performance, distributed key-value store designed for scalability and fault tolerance. It supports **replication, expiration (TTL), and eventual consistency** while maintaining a simple TCP-based interface.
 
 ---
 
