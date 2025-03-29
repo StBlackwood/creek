@@ -1,0 +1,46 @@
+name: Go CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build-test-coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+
+      - name: Build
+        run: go build -v ./cmd/server/main.go
+
+      - name: Run Tests with Coverage
+        run: go test -v -coverprofile=coverage.out ./test
+
+      - name: Upload Coverage Report as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.out
+
+      - name: Generate Coverage Badge
+        uses: jakebailey/coverage-badge-action@v1
+        with:
+          coverage-file: coverage.out
+          output: coverage.svg
+
+      - name: Upload Coverage Badge
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-badge
+          path: coverage.svg
