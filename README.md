@@ -1,3 +1,8 @@
+
+<p>
+  <img src="https://github.com/StBlackwood/creek/actions/workflows/go-ci.yml/badge.svg" alt="Build Status" width="180">
+</p>
+
 ## **CreekDB - A Distributed Key-Value Store**
 ![Creek Logo](assets/creek_logo_med.png)
 
