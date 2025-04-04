@@ -9,7 +9,8 @@ import (
 
 // LogEntry represents a single operation in the transaction log.
 type LogEntry struct {
-	Timestamp int64  // Versioning timestamp
+	Timestamp int64 // timestamp
+	Version   int
 	Operation string // e.g., "set", "delete"
 	Args      []string
 }
@@ -40,8 +41,8 @@ func (t *LogEntryWriter) Append(entry LogEntry) error {
 	defer t.mu.Unlock()
 
 	// Format log entry as a string with timestamp and arguments
-	logLine := fmt.Sprintf("%d %s %s\n",
-		entry.Timestamp, entry.Operation, strings.Join(entry.Args, " "))
+	logLine := fmt.Sprintf("%d %d %s %s\n",
+		entry.Timestamp, entry.Version, entry.Operation, strings.Join(entry.Args, " "))
 
 	if _, err := t.logFile.Write([]byte(logLine)); err != nil {
 		return fmt.Errorf("failed to write log buffer to file: %w", err)

@@ -61,7 +61,7 @@ func (p *Partition) processBatch(entries *[]string) {
 
 	for _, line := range *entries {
 		parts := strings.Fields(line)
-		if len(parts) < 3 {
+		if len(parts) < 4 {
 			continue
 		}
 
@@ -71,8 +71,13 @@ func (p *Partition) processBatch(entries *[]string) {
 			continue
 		}
 
-		op := parts[1]
-		args := parts[2:]
+		_, err = strconv.Atoi(parts[1])
+		if err != nil {
+			p.log.Warnf("Skipping malformed log entry: %s", line)
+		}
+
+		op := parts[2]
+		args := parts[3:]
 
 		p.processLogEntry(timestamp, op, args, now)
 	}

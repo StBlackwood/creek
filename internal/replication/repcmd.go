@@ -14,15 +14,17 @@ type RepCmd struct {
 	Timestamp   int64
 	Operation   string
 	Args        []string
+	Version     int
 }
 
 func (rm *RepCmd) String() string {
 	return fmt.Sprintf(
-		"%s %d %s %d %s %s\n",
+		"%s %d %s %d %d %s %s\n",
 		commons.CmdSysRep,
 		rm.PartitionId,
 		rm.Origin,
 		rm.Timestamp,
+		rm.Version,
 		rm.Operation,
 		strings.Join(rm.Args, " "),
 	)
@@ -74,8 +76,19 @@ func RepCmdFromString(s string) (*RepCmd, error) {
 		return nil, fmt.Errorf("invalid Timestamp: %v", err)
 	}
 
+	versionStart := timestampEnd + 1
+	versionEnd := strings.IndexByte(s[versionStart:], ' ')
+	if versionEnd == -1 {
+		return nil, fmt.Errorf("invalid format: missing fields")
+	}
+	versionEnd += versionStart
+	version, err := strconv.Atoi(s[versionStart:versionEnd])
+	if err != nil {
+		return nil, fmt.Errorf("invalid Version: %v", err)
+	}
+
 	// Extract Operation
-	operationStart := timestampEnd + 1
+	operationStart := versionEnd + 1
 	operationEnd := strings.IndexByte(s[operationStart:], ' ')
 	if operationEnd == -1 {
 		// No arguments, only operation
@@ -84,6 +97,7 @@ func RepCmdFromString(s string) (*RepCmd, error) {
 			Origin:      nodeId,
 			Timestamp:   timestamp,
 			Operation:   s[operationStart:],
+			Version:     version,
 			Args:        nil,
 		}, nil
 	}
@@ -99,6 +113,7 @@ func RepCmdFromString(s string) (*RepCmd, error) {
 		Timestamp:   timestamp,
 		Operation:   operation,
 		Args:        args,
+		Version:     version,
 	}, nil
 }
 
@@ -110,12 +125,13 @@ func (rm *RepCmd) Equals(other *RepCmd) bool {
 		rm.Origin == other.Origin &&
 		rm.Timestamp == other.Timestamp &&
 		rm.Operation == other.Operation &&
-		reflect.DeepEqual(rm.Args, other.Args)
+		reflect.DeepEqual(rm.Args, other.Args) &&
+		rm.Version == other.Version
 }
 
 func RepCmdFromArgs(args []string) (*RepCmd, error) {
-	if len(args) < 5 {
-		return nil, fmt.Errorf("invalid input: expected at least 5 arguments, got %d", len(args))
+	if len(args) < 6 {
+		return nil, fmt.Errorf("invalid input: expected at least 6 arguments, got %d", len(args))
 	}
 
 	// Extract PartitionId
@@ -130,11 +146,18 @@ func RepCmdFromArgs(args []string) (*RepCmd, error) {
 		return nil, fmt.Errorf("invalid Timestamp: %v", err)
 	}
 
+	// Extract Version
+	version, err := strconv.Atoi(args[3])
+	if err != nil {
+		return nil, fmt.Errorf("invalid Version: %v", err)
+	}
+
 	return &RepCmd{
 		PartitionId: partitionId,
 		Origin:      args[1],
 		Timestamp:   timestamp,
-		Operation:   args[3],
-		Args:        args[4:],
+		Operation:   args[4],
+		Args:        args[5:],
+		Version:     version,
 	}, nil
 }

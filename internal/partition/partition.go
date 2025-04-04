@@ -26,6 +26,8 @@ type Partition struct {
 	PartitionMode commons.PartitionMode
 	WriteMode     commons.WriteConsistencyMode
 
+	Version int
+
 	log *logrus.Logger
 
 	writeChan   chan *replication.RepCmd
@@ -60,6 +62,7 @@ func NewPartition(id int, nodeId string, cfg *config.Config, ds *datastore.DataS
 		ds:            ds,
 		PartitionMode: cfg.ServerMode,
 		log:           logger.CreateLogger(cfg.LogLevel),
+		Version:       0,
 		writeChan:     make(chan *replication.RepCmd, 100), // Buffered channel for async writes
 		WriteMode:     cfg.WriteConsistencyMode,
 		stopLWFlush:   make(chan struct{}),
@@ -159,8 +162,11 @@ func (p *Partition) cleanExpiredKeys() {
 func (p *Partition) Set(key, value string, ttl int) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	p.Version++
+
 	entry := LogEntry{
 		Timestamp: time.Now().UnixNano(),
+		Version:   p.Version,
 		Operation: commons.CmdDataSet,
 		Args:      []string{key, value, fmt.Sprintf("%d", ttl)},
 	}
@@ -182,6 +188,7 @@ func (p *Partition) Set(key, value string, ttl int) error {
 			Origin:      p.SelfNodeId,
 			PartitionId: p.Id,
 			Timestamp:   time.Now().UnixNano(),
+			Version:     p.Version,
 			Operation:   commons.CmdDataSet,
 			Args:        []string{key, value, fmt.Sprintf("%d", ttl)},
 		},
@@ -200,8 +207,10 @@ func (p *Partition) Delete(key string) error {
 }
 
 func (p *Partition) deleteWithoutLock(key string) error {
+	p.Version++
 	entry := LogEntry{
 		Timestamp: time.Now().UnixNano(),
+		Version:   p.Version,
 		Operation: commons.CmdDataDel,
 		Args:      []string{key},
 	}
@@ -223,6 +232,7 @@ func (p *Partition) deleteWithoutLock(key string) error {
 			Origin:      p.SelfNodeId,
 			PartitionId: p.Id,
 			Timestamp:   time.Now().UnixNano(),
+			Version:     p.Version,
 			Operation:   commons.CmdDataDel,
 			Args:        []string{key},
 		})
@@ -232,9 +242,11 @@ func (p *Partition) deleteWithoutLock(key string) error {
 func (p *Partition) Expire(key string, ttl int) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	p.Version++
 
 	entry := LogEntry{
 		Timestamp: time.Now().UnixNano(),
+		Version:   p.Version,
 		Operation: commons.CmdDataEXP,
 		Args:      []string{key, strconv.Itoa(ttl)},
 	}
@@ -256,6 +268,7 @@ func (p *Partition) Expire(key string, ttl int) error {
 			Origin:      p.SelfNodeId,
 			PartitionId: p.Id,
 			Timestamp:   time.Now().UnixNano(),
+			Version:     p.Version,
 			Operation:   commons.CmdDataEXP,
 			Args:        []string{key, strconv.Itoa(ttl)},
 		})

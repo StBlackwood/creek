@@ -13,30 +13,35 @@ import (
 var dataDir = "../data_dir"
 var testDataDir = dataDir + "/test"
 
+const hostAddress = "localhost:7690"
+const hostAddress1 = "localhost:7691"
+const hostAddress2 = "localhost:7692"
+
 var SimpleServerConfig = config.Config{
-	ServerAddress:        "localhost:7690",
+	ServerAddress:        hostAddress,
 	DataStoreDirectory:   testDataDir,
 	LogLevel:             "info",
 	WriteConsistencyMode: commons.EventualConsistency,
 }
 
-var FollowerServerConfig = config.Config{
-	ServerAddress:        "localhost:7692",
-	DataStoreDirectory:   testDataDir + "/follower",
-	LogLevel:             "info",
-	WriteConsistencyMode: commons.EventualConsistency,
-	ReplicationMode:      commons.ReadOnlyReplication,
-	ServerMode:           commons.Follower,
-}
-
 var LeaderServerConfig = config.Config{
-	ServerAddress:        "localhost:7691",
+	ServerAddress:        hostAddress1,
 	DataStoreDirectory:   testDataDir + "/leader",
 	LogLevel:             "info",
-	PeerNodes:            []string{FollowerServerConfig.ServerAddress},
+	PeerNodes:            []string{hostAddress2},
 	WriteConsistencyMode: commons.EventualConsistency,
 	ReplicationMode:      commons.ReadAndWriteReplication,
 	ServerMode:           commons.Leader,
+}
+
+var FollowerServerConfig = config.Config{
+	ServerAddress:        hostAddress2,
+	DataStoreDirectory:   testDataDir + "/follower",
+	LogLevel:             "info",
+	PeerNodes:            []string{hostAddress1},
+	WriteConsistencyMode: commons.EventualConsistency,
+	ReplicationMode:      commons.ReadOnlyReplication,
+	ServerMode:           commons.Follower,
 }
 
 func setupTest(conf *config.Config) {
