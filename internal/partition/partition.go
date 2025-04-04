@@ -80,6 +80,7 @@ func (p *Partition) Start() error {
 	p.startLWFlush()
 	if p.PartitionMode == commons.Leader {
 		p.startGC() // Start garbage collection only in leader mode. followers will receive expire deletes from leader
+		go p.replicateFromLog(p.lw.Subscribe())
 	}
 	return nil
 }
@@ -183,16 +184,6 @@ func (p *Partition) Set(key, value string, ttl int) error {
 	}
 
 	p.ds.Set(key, value, ttl)
-	p.SendWriteCommand(
-		&replication.RepCmd{
-			Origin:      p.SelfNodeId,
-			PartitionId: p.Id,
-			Timestamp:   time.Now().UnixNano(),
-			Version:     p.Version,
-			Operation:   commons.CmdDataSet,
-			Args:        []string{key, value, fmt.Sprintf("%d", ttl)},
-		},
-	)
 	return nil
 }
 
@@ -227,15 +218,6 @@ func (p *Partition) deleteWithoutLock(key string) error {
 	}
 	p.ds.Delete(key)
 
-	p.SendWriteCommand(
-		&replication.RepCmd{
-			Origin:      p.SelfNodeId,
-			PartitionId: p.Id,
-			Timestamp:   time.Now().UnixNano(),
-			Version:     p.Version,
-			Operation:   commons.CmdDataDel,
-			Args:        []string{key},
-		})
 	return nil
 }
 
@@ -263,15 +245,6 @@ func (p *Partition) Expire(key string, ttl int) error {
 	}
 	p.ds.Expire(key, ttl)
 
-	p.SendWriteCommand(
-		&replication.RepCmd{
-			Origin:      p.SelfNodeId,
-			PartitionId: p.Id,
-			Timestamp:   time.Now().UnixNano(),
-			Version:     p.Version,
-			Operation:   commons.CmdDataEXP,
-			Args:        []string{key, strconv.Itoa(ttl)},
-		})
 	return nil
 }
 
@@ -318,5 +291,20 @@ func (p *Partition) ProcessRepCmd(cmd *replication.RepCmd) error {
 
 	default:
 		return fmt.Errorf("invalid operation in rep command: %s", cmd.String())
+	}
+}
+
+func (p *Partition) replicateFromLog(entries <-chan LogEntry) {
+	for entry := range entries {
+		repCmd := &replication.RepCmd{
+			Origin:      p.SelfNodeId,
+			PartitionId: p.Id,
+			Timestamp:   entry.Timestamp,
+			Version:     entry.Version,
+			Operation:   entry.Operation,
+			Args:        entry.Args,
+		}
+		// Send to quorum or replication service
+		p.SendWriteCommand(repCmd)
 	}
 }

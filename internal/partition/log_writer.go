@@ -20,6 +20,7 @@ type LogEntryWriter struct {
 	mu          sync.Mutex
 	logFile     *os.File
 	logFilePath string
+	subscribers []chan LogEntry // subscribers to notify on every append
 }
 
 // newLogEntryWriter initializes a transaction log and opens the file for writing.
@@ -48,6 +49,14 @@ func (t *LogEntryWriter) Append(entry LogEntry) error {
 		return fmt.Errorf("failed to write log buffer to file: %w", err)
 	}
 
+	for _, sub := range t.subscribers {
+		select {
+		case sub <- entry:
+		default:
+			// Optionally: log or drop if full
+			return fmt.Errorf("channel full buffer is full dropped")
+		}
+	}
 	return nil
 }
 
@@ -66,4 +75,10 @@ func (t *LogEntryWriter) Flush() error {
 	}
 
 	return nil
+}
+
+func (t *LogEntryWriter) Subscribe() <-chan LogEntry {
+	ch := make(chan LogEntry, 100)
+	t.subscribers = append(t.subscribers, ch)
+	return ch
 }
